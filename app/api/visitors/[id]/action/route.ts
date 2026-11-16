@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../../../../../lib/prisma';
 import { generatePassCode } from '@/lib/utils';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {

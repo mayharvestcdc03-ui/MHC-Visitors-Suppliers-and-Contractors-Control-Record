@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Navigation } from '@/components/Header';
+import { Navigation } from '../components/Header';
 
 const VISITOR_TYPES = [
   'Visitor', 'Supplier', 'Contractor', 'Driver / Helper',

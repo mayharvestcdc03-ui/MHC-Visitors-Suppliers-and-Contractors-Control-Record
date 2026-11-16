@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../../../lib/prisma';
 import fs from 'fs';
 
 const RETENTION_DAYS = 30;

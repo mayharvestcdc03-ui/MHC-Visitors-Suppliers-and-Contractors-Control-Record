@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Navigation } from '@/components/Header';
+import { Navigation } from '../../components/Header';
 
 const RETENTION_DAYS = 30;
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Navigation } from '@/components/Header';
+import { Navigation } from '../../components/Header';
 
 function GatePassContent() {
   const params = useSearchParams();

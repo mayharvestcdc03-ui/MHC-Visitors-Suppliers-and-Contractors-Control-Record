@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Navigation } from '@/components/Header';
+import { Navigation } from '../../components/Header';
 
 function GuardContent() {
   const params = useSearchParams();
