@@ -1,0 +1,75 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String   // Hashed via bcrypt
+  role      String   @default("GUARD") // ADMIN, GUARD, STAFF
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auditLogs AuditLog[]
+}
+
+model Visitor {
+  id                  String        @id @default(cuid())
+  registeredAt        DateTime      @default(now())
+  visitorType         String        // Visitor, Supplier, Contractor, etc.
+  fullName            String
+  idType              String        // Philippine National ID, Driver's License, etc.
+  idNumber            String
+  company             String
+  contact             String?
+  personToVisit       String
+  purpose             String
+  area                String        // Office / Reception, Production Area, etc.
+  plate               String?
+  visitDate           String        // YYYY-MM-DD
+  expectedTime        String        // HH:mm
+  notes               String?
+  
+  // Health Declaration
+  healthAnswers       String        // JSON array of 14 responses
+  healthConsent       Boolean       @default(false)
+  hasHealthSymptoms   Boolean       @default(false) // Flag if any "Yes" answer
+
+  // ID Verification & Media
+  idFileName          String?
+  idFileType          String?
+  idFilePath          String?       // Stored secure path or Cloudflare R2 / local
+  idPurgedAt          DateTime?     // When media was purged for DPA compliance
+  privacyConsent      Boolean       @default(true)
+
+  // Status & Pass Tracking
+  status              String        @default("PENDING_ID_VERIFICATION")
+  passCode            String?       @unique // MHC-XXXX-XXXX
+  passUsed            Boolean       @default(false)
+  verifiedBy          String?
+  verifiedAt          DateTime?
+  entryRecordedBy     String?
+  timeIn              DateTime?
+  exitRecordedBy      String?
+  timeOut             DateTime?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userName  String
+  action    String   // VIEW_ID, APPROVE_PASS, REJECT_PASS, RECORD_ENTRY, RECORD_EXIT, PURGE_ID
+  targetId  String?  // Visitor ID
+  details   String?
+  ipAddress String?
+  timestamp DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}

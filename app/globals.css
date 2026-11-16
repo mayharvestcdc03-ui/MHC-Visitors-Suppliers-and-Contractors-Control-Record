@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy: #17324d;
+  --blue: #245b82;
+  --light: #f3f6f9;
+  --line: #d7e0e8;
+  --green: #18794e;
+  --red: #b42318;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #17212b;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+@media print {
+  header, nav, aside, .no-print, button {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .print-only-card {
+    display: block !important;
+    width: 100% !important;
+    max-width: 650px !important;
+    margin: 0 auto !important;
+    border: 2px dashed #17324d !important;
+    padding: 24px !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+}
