@@ -11,10 +11,241 @@
   --red: #b42318;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
-  background-color: #f8fafc;
+  margin: 0;
+  font: 15px Arial, sans-serif;
+  background: #1c854c !important;
   color: #17212b;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+header {
+  background: var(--navy);
+  color: white;
+  padding: 16px 24px;
+}
+
+nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid var(--line);
+}
+
+button, .tab {
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-block;
+  background: var(--blue);
+  color: white;
+}
+
+.tab {
+  background: #e6edf3;
+  color: var(--navy);
+}
+
+.tab.active {
+  background: var(--navy);
+  color: white;
+}
+
+main {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 7px rgba(21, 43, 59, 0.08);
+}
+
+h2 {
+  font-size: 19px;
+  margin: 0 0 16px;
+  color: var(--green);
+  font-weight: 700;
+}
+
+h3 {
+  margin: 18px 0 10px;
+  font-size: 15px;
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: #34495e;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #bdcbd7;
+  border-radius: 6px;
+  background: white;
+  font: inherit;
+  font-size: 14px;
+  color: #17212b;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+}
+
+.field {
+  min-width: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.muted {
+  color: #5c6c79;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.secondary {
+  background: #647789 !important;
+  color: white !important;
+}
+
+.danger {
+  background: var(--red) !important;
+  color: white !important;
+}
+
+.success {
+  background: var(--green) !important;
+  color: white !important;
+}
+
+.notice {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #edf5fb;
+  border: 1px solid #c8deef;
+  margin: 10px 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.status {
+  font-weight: 700;
+}
+
+.pending {
+  color: #9a6700;
+}
+
+.verified {
+  color: var(--green);
+}
+
+.expired {
+  color: var(--red);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+th, td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+th {
+  background: #edf2f6;
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.tablewrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+#passCard {
+  max-width: 650px;
+  border: 2px dashed var(--navy);
+  padding: 24px;
+  margin-top: 15px;
+  background: white;
+}
+
+.passhead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid var(--navy);
+  padding-bottom: 12px;
+}
+
+.passcode {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--navy);
+  margin: 16px 0;
+}
+
+.small {
+  font-size: 12px;
+}
+
+@media (max-width: 750px) {
+  .grid, .grid.two {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media print {
@@ -27,14 +258,14 @@ body {
     margin: 0 !important;
     padding: 0 !important;
   }
-  .print-only-card {
-    display: block !important;
-    width: 100% !important;
-    max-width: 650px !important;
-    margin: 0 auto !important;
-    border: 2px dashed #17324d !important;
-    padding: 24px !important;
-    page-break-inside: avoid;
+  .card {
+    border: 0 !important;
     box-shadow: none !important;
+    padding: 0 !important;
+  }
+  #passCard {
+    display: block !important;
+    margin: 0 auto !important;
+    border: 2px dashed #222 !important;
   }
 }

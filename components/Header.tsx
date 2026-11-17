@@ -2,27 +2,21 @@ import Link from 'next/link';
 
 export function Header() {
   return (
-    <header className="bg-[#17324d] text-white py-4 px-6 shadow-md no-print">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white rounded-lg p-1 flex items-center justify-center shadow flex-shrink-0">
-            {/* MHC Brand Badge */}
-            <span className="font-extrabold text-[#18794e] text-xl tracking-tighter">MHC</span>
+    <header className="no-print">
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 60, height: 60, background: '#fff', borderRadius: 8, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+            <span style={{ color: '#18794e', fontWeight: 900, fontSize: 20, letterSpacing: -1 }}>MHC</span>
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
-              May Harvest Corporation
-            </h1>
-            <p className="text-xs md:text-sm text-slate-300">
-              Visitor, Supplier & Contractor Monitoring • Enterprise Gate Pass System
-            </p>
+            <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#fff' }}>May Harvest Corporation</h1>
+            <p style={{ margin: 0, fontSize: 13, color: '#dce7f1' }}>Visitor, Supplier &amp; Contractor Monitoring • One-Time Gate Pass</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            System Live & Compliant (RA 10173)
+        <div>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: 'rgba(24, 121, 78, 0.4)', color: '#a7f3d0', border: '1px solid rgba(167, 243, 208, 0.3)' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399' }}></span>
+            Online &amp; RA 10173 Compliant
           </span>
         </div>
       </div>
@@ -33,31 +27,25 @@ export function Header() {
 export function Navigation({ activeTab }: { activeTab?: string }) {
   const tabs = [
     { id: 'register', label: 'Register Visitor', href: '/' },
-    { id: 'guard', label: 'Guard & ID Verification', href: '/guard' },
     { id: 'records', label: 'Monitoring Records', href: '/records' },
+    { id: 'guard', label: 'Security Approval / Guard', href: '/guard' },
     { id: 'pass', label: 'Gate Pass', href: '/pass' },
   ];
 
   return (
-    <nav className="bg-white border-b border-slate-200 px-6 py-2.5 shadow-sm no-print sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <Link
-              key={tab.id}
-              href={tab.href}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'bg-[#17324d] text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </div>
+    <nav className="no-print" style={{ background: '#fff', borderBottom: '1px solid var(--line)', padding: '10px 20px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <Link
+            key={tab.id}
+            href={tab.href}
+            className={`tab ${isActive ? 'active' : ''}`}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
