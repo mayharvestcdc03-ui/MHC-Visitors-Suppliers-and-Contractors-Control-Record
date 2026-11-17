@@ -65,18 +65,7 @@ function GatePassContent() {
               {/* MHC Logo + Name */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {/* MHC 4-Leaf Clover Logo */}
-                  <svg viewBox="0 0 100 100" width="46" height="46">
-                    <circle cx="36" cy="36" r="22" fill="#18794e" />
-                    <circle cx="64" cy="36" r="22" fill="#18794e" />
-                    <circle cx="36" cy="64" r="22" fill="#18794e" />
-                    <circle cx="64" cy="64" r="22" fill="#18794e" />
-                    <path d="M 50 50 Q 50 88 44 94" stroke="#18794e" strokeWidth="6" fill="none" strokeLinecap="round" />
-                    <text x="36" y="42" fill="#fff" fontSize="13" fontWeight="900" textAnchor="middle">M</text>
-                    <text x="50" y="55" fill="#facc15" fontSize="11" fontWeight="900" textAnchor="middle">★</text>
-                    <text x="64" y="42" fill="#fff" fontSize="13" fontWeight="900" textAnchor="middle">H</text>
-                    <text x="50" y="72" fill="#fff" fontSize="13" fontWeight="900" textAnchor="middle">C</text>
-                  </svg>
+                  <img src="/mhc-logo.png" alt="MHC Logo" style={{ width: 48, height: 48, objectFit: 'contain' }} />
                 </div>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 16, color: '#17212b', letterSpacing: 0.5 }}>
@@ -227,7 +216,7 @@ function GatePassContent() {
                   Person to Visit
                 </label>
                 <div style={{ fontWeight: 600, fontSize: 14, color: '#17212b' }}>
-                  {visitor.personToVisit}
+                  {visitor.personToVisit || 'N/A - Delivery / Pick-up'}
                 </div>
               </div>
 

@@ -124,7 +124,7 @@ function GuardContent() {
               Company: {selected.company}<br />
               ID: {selected.idType} — {selected.idNumber}<br />
               Purpose: {selected.purpose}<br />
-              Person to visit: {selected.personToVisit}<br />
+              Person to visit: {selected.personToVisit || 'N/A - Delivery / Pick-up'}<br />
               Requested area: {selected.area}<br />
               Health answers: {(() => {
                 try {

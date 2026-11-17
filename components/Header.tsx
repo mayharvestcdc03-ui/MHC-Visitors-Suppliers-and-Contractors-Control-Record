@@ -6,7 +6,7 @@ export function Header() {
       <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 60, height: 60, background: '#fff', borderRadius: 8, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-            <span style={{ color: '#18794e', fontWeight: 900, fontSize: 20, letterSpacing: -1 }}>MHC</span>
+            <img src="/mhc-logo.png" alt="May Harvest Corporation" style={{ width: 52, height: 52, objectFit: 'contain' }} />
           </div>
           <div>
             <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#fff' }}>May Harvest Corporation</h1>

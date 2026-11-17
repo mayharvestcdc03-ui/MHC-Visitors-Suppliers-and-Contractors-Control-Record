@@ -149,8 +149,8 @@ export default function HomePage() {
                   <input type="tel" placeholder="Contact Number" value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} />
                 </div>
                 <div className="field">
-                  <label>Person to Visit *</label>
-                  <input required placeholder="Person to Visit" value={form.personToVisit} onChange={e => setForm(f => ({ ...f, personToVisit: e.target.value }))} />
+                  <label>Person to Visit</label>
+                  <input placeholder="Person to Visit (Opsyonal para sa truckers / delivery)" value={form.personToVisit} onChange={e => setForm(f => ({ ...f, personToVisit: e.target.value }))} />
                 </div>
                 <div className="field">
                   <label>Purpose of Visit *</label>
