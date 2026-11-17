@@ -167,17 +167,17 @@ export default function RecordsPage() {
           <div className="tablewrap" style={{ marginTop: 16 }}>
             <table>
               <thead>
-                <tr style={{ background: '#0e3d24', color: '#fff' }}>
-                  <th style={{ color: '#fff' }}>Petsa ng Rehistro</th>
-                  <th style={{ color: '#fff' }}>Pangalan ng Bisita</th>
-                  <th style={{ color: '#fff' }}>Uri</th>
-                  <th style={{ color: '#fff' }}>Kumpanya / Sasakyan</th>
-                  <th style={{ color: '#fff' }}>Bibisitahin / Lugar</th>
-                  <th style={{ color: '#fff' }}>Pass Code</th>
-                  <th style={{ color: '#fff' }}>Status</th>
-                  <th style={{ color: '#fff', background: '#166534' }}>Time In (Pumasok)</th>
-                  <th style={{ color: '#fff', background: '#92400e' }}>Time Out (Lumabas)</th>
-                  <th style={{ color: '#fff' }}>Aksyon</th>
+                <tr style={{ background: '#0e3d24' }}>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Petsa ng Rehistro</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Pangalan ng Bisita</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Uri</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Kumpanya / Sasakyan</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Bibisitahin / Lugar</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Pass Code</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Status</th>
+                  <th style={{ background: '#166534', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13, textAlign: 'center' }}>Time In (Pumasok)</th>
+                  <th style={{ background: '#92400e', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13, textAlign: 'center' }}>Time Out (Lumabas)</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', fontWeight: 800, padding: '12px 14px', fontSize: 13 }}>Aksyon</th>
                 </tr>
               </thead>
               <tbody>

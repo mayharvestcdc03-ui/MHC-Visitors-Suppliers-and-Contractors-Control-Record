@@ -387,9 +387,9 @@ export default function HomePage() {
               <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 6, marginBottom: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--line)', textAlign: 'left' }}>
-                      <th style={{ padding: '8px 12px' }}>{t.healthTableHeadQ}</th>
-                      <th style={{ padding: '8px 12px', width: 140, textAlign: 'right' }}>{t.healthTableHeadA}</th>
+                    <tr style={{ background: '#0e3d24' }}>
+                      <th style={{ background: '#0e3d24', color: '#ffffff', padding: '10px 12px', fontWeight: 800 }}>{t.healthTableHeadQ}</th>
+                      <th style={{ background: '#0e3d24', color: '#ffffff', padding: '10px 12px', width: 140, textAlign: 'right', fontWeight: 800 }}>{t.healthTableHeadA}</th>
                     </tr>
                   </thead>
                   <tbody>

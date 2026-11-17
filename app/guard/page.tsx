@@ -410,15 +410,15 @@ function GuardContent() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>
-                  <th style={{ padding: '12px 16px' }}>Uri / Visitor Type</th>
-                  <th style={{ padding: '12px 16px' }}>Pangalan ng Bisita</th>
-                  <th style={{ padding: '12px 16px' }}>Kumpanya / Plate No.</th>
-                  <th style={{ padding: '12px 16px' }}>Lugar at Layunin</th>
-                  <th style={{ padding: '12px 16px' }}>Person to Visit</th>
-                  <th style={{ padding: '12px 16px' }}>Petsa at Oras</th>
-                  <th style={{ padding: '12px 16px' }}>Kalusugan</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center' }}>Mga Aksyon</th>
+                <tr style={{ background: '#0e3d24' }}>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Uri / Visitor Type</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Pangalan ng Bisita</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Kumpanya / Plate No.</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Lugar at Layunin</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Person to Visit</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Petsa at Oras</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>Kalusugan</th>
+                  <th style={{ background: '#0e3d24', color: '#ffffff', padding: '12px 16px', fontWeight: 800, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5, textAlign: 'center' }}>Mga Aksyon</th>
                 </tr>
               </thead>
               <tbody>
