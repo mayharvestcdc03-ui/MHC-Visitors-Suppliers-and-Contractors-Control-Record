@@ -1,196 +1,822 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Navigation } from '../../components/Header';
+import { getVisitorTheme } from '../../lib/utils';
 
 function GuardContent() {
   const params = useSearchParams();
   const [guardName, setGuardName] = useState('');
   const [visitors, setVisitors] = useState<any[]>([]);
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedVisitor, setSelectedVisitor] = useState<any | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'PENDING' | 'APPROVED' | 'ENTERED' | 'ALL'>('PENDING');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'verified' | 'expired' | ''>('');
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'danger' | 'info'; passCode?: string; visitorId?: string } | null>(null);
+
+  // Load guard name from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mhc_guard_name');
+    if (saved) setGuardName(saved);
+  }, []);
+
+  const handleGuardNameChange = (val: string) => {
+    setGuardName(val);
+    localStorage.setItem('mhc_guard_name', val);
+  };
 
   const fetchVisitors = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/visitors');
-    const data = await res.json();
-    if (data.success) setVisitors(data.data);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/visitors');
+      const data = await res.json();
+      if (data.success) {
+        setVisitors(data.data || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { fetchVisitors(); }, [fetchVisitors]);
+  useEffect(() => {
+    fetchVisitors();
+  }, [fetchVisitors]);
 
   // Auto-select visitor from URL ?select=<id>
   useEffect(() => {
     const selectId = params.get('select');
     if (selectId && visitors.length > 0) {
-      setSelectedId(selectId);
+      const found = visitors.find(v => v.id === selectId);
+      if (found) setSelectedVisitor(found);
     }
   }, [params, visitors]);
 
-  const selected = visitors.find(v => v.id === selectedId);
+  // Filter visitors
+  const pendingVisitors = useMemo(() => {
+    return visitors.filter(v => (v.status || '').toLowerCase().includes('pending'));
+  }, [visitors]);
 
-  const getStatus = (r: any) => r?.status || 'Pending ID Verification';
+  const approvedVisitors = useMemo(() => {
+    return visitors.filter(v => (v.status || '').toLowerCase().includes('approved') && !v.timeIn);
+  }, [visitors]);
 
-  const statusClass = (s: string) => {
-    if (s.includes('Approved') || s === 'Entered') return 'verified';
-    if (s === 'Rejected') return 'expired';
-    return 'pending';
-  };
+  const enteredVisitors = useMemo(() => {
+    return visitors.filter(v => (v.status || '').toLowerCase() === 'entered' && !v.timeOut);
+  }, [visitors]);
 
-  const showMsg = (msg: string, type: 'verified' | 'expired' | '') => {
-    setMessage(msg); setMessageType(type);
-  };
+  const filteredVisitors = useMemo(() => {
+    let list = visitors;
+    if (activeFilter === 'PENDING') {
+      list = pendingVisitors;
+    } else if (activeFilter === 'APPROVED') {
+      list = approvedVisitors;
+    } else if (activeFilter === 'ENTERED') {
+      list = enteredVisitors;
+    }
 
-  const doAction = async (action: string) => {
-    if (!selected) return alert('Select a visitor first.');
-    if (!guardName.trim()) return alert('Enter guard/verifier name.');
-    const r = selected;
-    const st = getStatus(r);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(v =>
+        (v.fullName || '').toLowerCase().includes(q) ||
+        (v.company || '').toLowerCase().includes(q) ||
+        (v.plate || '').toLowerCase().includes(q) ||
+        (v.visitorType || '').toLowerCase().includes(q) ||
+        (v.passCode || '').toLowerCase().includes(q) ||
+        (v.purpose || '').toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [visitors, activeFilter, pendingVisitors, approvedVisitors, enteredVisitors, search]);
+
+  const doAction = async (visitor: any, action: string) => {
+    if (!guardName.trim()) {
+      alert('Paki-lagay muna ang iyong pangalan sa "Guard / Verifier Name" bago magpatuloy.');
+      return;
+    }
+
+    const st = visitor.status || 'Pending ID Verification';
 
     if (action === 'approve') {
-      if (st === 'Rejected') return alert('Rejected registration cannot be approved. Register again or follow your company process.');
+      if (st === 'Rejected') return alert('Hindi na maaaring i-approve ang rejected registration.');
     }
     if (action === 'reject') {
-      if (r.passUsed) return alert('This pass has already been used. Record the issue in notes and follow security procedure.');
+      if (visitor.passUsed) return alert('Nagamit na ang pass na ito.');
+      if (!confirm(`Sigurado ka bang nais mong i-REJECT si ${visitor.fullName}?`)) return;
     }
     if (action === 'entry') {
-      if (!r.passCode || !['Approved - Pass Issued', 'Entered'].includes(st)) return alert('No approved pass. Verify the ID and issue a pass first.');
-      if (r.passUsed || r.timeIn) return alert('This one-time pass has already been used for entry. Do not allow re-entry.');
-      const today = new Date().toISOString().slice(0, 10);
-      if (r.visitDate !== today) return alert('Pass is not valid for today.');
+      if (!visitor.passCode) return alert('Wala pang approved pass code. I-approve muna ang ID.');
+      if (visitor.passUsed || visitor.timeIn) return alert('Nagamit na ang one-time pass na ito.');
     }
     if (action === 'exit') {
-      if (!r.timeIn) return alert('No entry recorded for this visitor.');
-      if (r.timeOut) return alert('Exit has already been recorded.');
+      if (!visitor.timeIn) return alert('Wala pang entry record si bisita.');
+      if (visitor.timeOut) return alert('Naitala na ang exit ni bisita.');
     }
 
-    const res = await fetch(`/api/visitors/${r.id}/action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, guardName }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      await fetchVisitors();
-      if (action === 'approve') {
+    setActionLoadingId(visitor.id);
+    setMessage(null);
+
+    try {
+      const res = await fetch(`/api/visitors/${visitor.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, guardName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchVisitors();
         const updated = data.data;
-        showMsg(`ID marked as visually verified. One-time pass issued: <b>${updated.passCode}</b>`, 'verified');
-        window.location.href = `/pass?id=${r.id}`;
-      } else if (action === 'reject') {
-        showMsg('Registration rejected. No gate pass is active.', 'expired');
-      } else if (action === 'entry') {
-        showMsg('Entry recorded. This one-time pass is now USED and cannot be used again.', 'verified');
-      } else if (action === 'exit') {
-        showMsg('Exit recorded.', '');
+
+        if (action === 'approve') {
+          setMessage({
+            text: `✅ Matagumpay na na-approve si <b>${visitor.fullName}</b>! One-Time Gate Pass Code: <b>${updated.passCode}</b>`,
+            type: 'success',
+            passCode: updated.passCode,
+            visitorId: visitor.id,
+          });
+          if (selectedVisitor?.id === visitor.id) setSelectedVisitor(updated);
+        } else if (action === 'reject') {
+          setMessage({ text: `❌ Na-reject ang registration ni <b>${visitor.fullName}</b>.`, type: 'danger' });
+          if (selectedVisitor?.id === visitor.id) setSelectedVisitor(null);
+        } else if (action === 'entry') {
+          setMessage({ text: `🚪 Naitala ang ENTRY ni <b>${visitor.fullName}</b>. Nagamit na ang pass.`, type: 'success' });
+          if (selectedVisitor?.id === visitor.id) setSelectedVisitor(updated);
+        } else if (action === 'exit') {
+          setMessage({ text: `👋 Naitala ang EXIT ni <b>${visitor.fullName}</b>.`, type: 'info' });
+          if (selectedVisitor?.id === visitor.id) setSelectedVisitor(updated);
+        }
+      } else {
+        alert(data.error || 'Nabigo ang aksyon.');
       }
-    } else {
-      alert(data.error || 'Action failed.');
+    } catch (err: any) {
+      alert(err.message || 'Error sa pakikipag-ugnayan sa server.');
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   return (
-    <section className="panel active">
-      <div className="card">
-        <h2>ID Verification / Security Guard</h2>
-        <div className="grid two">
+    <section className="panel active" style={{ maxWidth: 1250, margin: '20px auto', padding: '0 16px' }}>
+      {/* Top Banner & Verifier Profile */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <label>Select registration</label>
-            <select value={selectedId} onChange={e => { setSelectedId(e.target.value); setMessage(''); }}>
-              <option value="">Select visitor</option>
-              {visitors.map(r => (
-                <option key={r.id} value={r.id}>
-                  {r.fullName} — {r.visitDate} — {getStatus(r)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label>Guard / Verifier Name *</label>
-            <input value={guardName} onChange={e => setGuardName(e.target.value)} placeholder="Enter your name" />
-          </div>
-        </div>
-
-        {/* Visitor Details */}
-        <div id="verifyDetails" className="notice" style={{ marginTop: 10 }}>
-          {!selected ? (
-            'Select a registration to review its details and uploaded ID.'
-          ) : (
-            <>
-              <b>{selected.fullName}</b> ({selected.visitorType})<br />
-              Company: {selected.company}<br />
-              ID: {selected.idType} — {selected.idNumber}<br />
-              Purpose: {selected.purpose}<br />
-              Person to visit: {selected.personToVisit || 'N/A - Delivery / Pick-up'}<br />
-              Requested area: {selected.area}<br />
-              Health answers: {(() => {
-                try {
-                  const arr = JSON.parse(selected.healthAnswers || '[]');
-                  return arr.map((v: string, i: number) => `${i + 1}: ${v}`).join('; ');
-                } catch { return selected.healthAnswers; }
-              })()}<br />
-              Visit date: {selected.visitDate} {selected.expectedTime}<br />
-              Uploaded file: {selected.idFileName || 'No file'}<br />
-              Status: <span className={`status ${statusClass(getStatus(selected))}`}>{getStatus(selected)}</span><br />
-              Current pass: {selected.passCode || 'Not issued'}
-            </>
-          )}
-        </div>
-
-        {/* ID Image Preview — guard name passed to API for RA 10173 audit log */}
-        {selected && selected.idPurgedAt && (
-          <div className="notice" style={{ background: '#f8f9fa', borderColor: '#aaa', color: '#555', marginTop: 10 }}>
-            🗑 <b>ID document purged</b> — deleted per RA 10173 ({new Date(selected.idPurgedAt).toLocaleDateString()}).
-            Only the visitor record is retained.
-          </div>
-        )}
-        {selected && selected.idFilePath && !selected.idPurgedAt && selected.idFileType?.startsWith('image/') && (
-          <div style={{ marginTop: 10 }}>
-            <p className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-              🔒 Viewing this ID is logged per RA 10173. Guard name required above before viewing.
+            <h2 style={{ margin: '0 0 4px', fontSize: 22, color: '#18794e' }}>
+              Security Approval &amp; Gate Pass Issuance
+            </h2>
+            <p style={{ margin: 0, fontSize: 13, color: '#555' }}>
+              Nakalapag ang lahat ng bisita, trucker, at kontratista na naghihintay ng ID verification at gate pass approval.
             </p>
-            <img
-              src={`/api/id-preview?id=${selected.id}&guard=${encodeURIComponent(guardName || 'Unknown')}`}
-              alt="Uploaded ID for review"
-              style={{ maxWidth: '100%', maxHeight: 440, border: '1px solid #ccd', borderRadius: 8 }}
+          </div>
+
+          <div style={{ minWidth: 280 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#17324d', display: 'block', marginBottom: 4 }}>
+              👮 Security Guard / Verifier Name *
+            </label>
+            <input
+              value={guardName}
+              onChange={e => handleGuardNameChange(e.target.value)}
+              placeholder="e.g. Officer Reyes / Joshua Francisco"
+              style={{ fontWeight: 600, borderColor: '#18794e', background: '#f0fdf4' }}
             />
           </div>
-        )}
-        {selected && selected.idFilePath && !selected.idPurgedAt && selected.idFileType === 'application/pdf' && (
-          <div style={{ marginTop: 10 }}>
-            <a
-              href={`/api/id-preview?id=${selected.id}&guard=${encodeURIComponent(guardName || 'Unknown')}`}
-              target="_blank" rel="noopener"
-            >
-              Open uploaded ID PDF (access is logged)
-            </a>
-          </div>
-        )}
-        {selected && !selected.idFilePath && !selected.idPurgedAt && (
-          <p className="muted">ID preview unavailable.</p>
-        )}
-
-        <div className="actions">
-          <button className="success" onClick={() => doAction('approve')}>Approve ID &amp; Issue One-Time Pass</button>
-          <button className="danger" onClick={() => doAction('reject')}>Reject ID</button>
-          <button onClick={() => doAction('entry')}>Record Entry (use pass)</button>
-          <button className="secondary" onClick={() => doAction('exit')}>Record Exit</button>
-          <button className="secondary" onClick={fetchVisitors}>Refresh List</button>
         </div>
 
-        <p className="muted">Approve only after visually checking the original valid ID against the uploaded copy and confirming visit authorization. Each pass can be used for entry only once. Exit recording does not reactivate the pass.</p>
-
+        {/* Success / Alert Banner */}
         {message && (
           <div
-            className="notice"
-            style={messageType === 'verified' ? { borderColor: '#a8d5b5', background: '#e7f6ee', color: '#0f5c3a' } : messageType === 'expired' ? { borderColor: '#f5c6cb', background: '#fff3f3', color: '#721c24' } : {}}
-            dangerouslySetInnerHTML={{ __html: message }}
+            style={{
+              marginTop: 16,
+              padding: '12px 16px',
+              borderRadius: 8,
+              border: `1px solid ${message.type === 'success' ? '#86efac' : message.type === 'danger' ? '#fca5a5' : '#93c5fd'}`,
+              background: message.type === 'success' ? '#f0fdf4' : message.type === 'danger' ? '#fef2f2' : '#eff6ff',
+              color: message.type === 'success' ? '#166534' : message.type === 'danger' ? '#991b1b' : '#1e40af',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div dangerouslySetInnerHTML={{ __html: message.text }} />
+            {message.passCode && message.visitorId && (
+              <Link
+                href={`/pass?id=${message.visitorId}`}
+                style={{
+                  background: '#16a34a',
+                  color: '#fff',
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Tingnan / I-print ang Gate Pass ({message.passCode}) &rarr;
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Quick Filter Counters */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setActiveFilter('PENDING')}
+            style={{
+              background: activeFilter === 'PENDING' ? '#b45309' : '#fef3c7',
+              color: activeFilter === 'PENDING' ? '#fff' : '#92400e',
+              border: '1px solid #f59e0b',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span>⏳ For Approval (Kailangan i-approve)</span>
+            <span
+              style={{
+                background: activeFilter === 'PENDING' ? 'rgba(255,255,255,0.3)' : '#b45309',
+                color: '#fff',
+                padding: '2px 8px',
+                borderRadius: 12,
+                fontSize: 12,
+              }}
+            >
+              {pendingVisitors.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter('APPROVED')}
+            style={{
+              background: activeFilter === 'APPROVED' ? '#15803d' : '#dcfce7',
+              color: activeFilter === 'APPROVED' ? '#fff' : '#166534',
+              border: '1px solid #22c55e',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span>✅ Approved / Ready for Entry</span>
+            <span
+              style={{
+                background: activeFilter === 'APPROVED' ? 'rgba(255,255,255,0.3)' : '#15803d',
+                color: '#fff',
+                padding: '2px 8px',
+                borderRadius: 12,
+                fontSize: 12,
+              }}
+            >
+              {approvedVisitors.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter('ENTERED')}
+            style={{
+              background: activeFilter === 'ENTERED' ? '#1d4ed8' : '#dbeafe',
+              color: activeFilter === 'ENTERED' ? '#fff' : '#1e40af',
+              border: '1px solid #3b82f6',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span>🏢 Currently Inside</span>
+            <span
+              style={{
+                background: activeFilter === 'ENTERED' ? 'rgba(255,255,255,0.3)' : '#1d4ed8',
+                color: '#fff',
+                padding: '2px 8px',
+                borderRadius: 12,
+                fontSize: 12,
+              }}
+            >
+              {enteredVisitors.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter('ALL')}
+            style={{
+              background: activeFilter === 'ALL' ? '#374151' : '#f3f4f6',
+              color: activeFilter === 'ALL' ? '#fff' : '#374151',
+              border: '1px solid #9ca3af',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            Lahat ({visitors.length})
+          </button>
+        </div>
+
+        {/* Search & Refresh */}
+        <div style={{ display: 'flex', gap: 12, marginTop: 14 }}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Maghanap ayon sa Pangalan, Kumpanya, Plate No., o Uri ng Bisita..."
+            style={{ flex: 1, padding: '8px 12px', fontSize: 14 }}
           />
+          <button
+            type="button"
+            onClick={fetchVisitors}
+            disabled={loading}
+            style={{
+              background: '#245b82',
+              color: '#fff',
+              padding: '8px 16px',
+              borderRadius: 6,
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {loading ? 'Kinakarga...' : '🔄 I-refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main List Table (Nakalatag na lahat) */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: 16, color: '#17324d', fontWeight: 700 }}>
+            {activeFilter === 'PENDING' && `⏳ Mga Naghihintay ng Approval (${filteredVisitors.length})`}
+            {activeFilter === 'APPROVED' && `✅ Mga Approved na Gate Pass (${filteredVisitors.length})`}
+            {activeFilter === 'ENTERED' && `🏢 Mga Kasalukuyang Nasa Loob (${filteredVisitors.length})`}
+            {activeFilter === 'ALL' && `📋 Lahat ng Talaan (${filteredVisitors.length})`}
+          </h3>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>
+            I-click ang <b>"Approve &amp; Issue Pass"</b> para bigyan agad ng Gate Pass code ang bisita.
+          </span>
+        </div>
+
+        {filteredVisitors.length === 0 ? (
+          <div style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+            {activeFilter === 'PENDING' ? (
+              <div>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d' }}>Walang Pending for Approval!</div>
+                <div style={{ fontSize: 13, marginTop: 4 }}>Lahat ng nag-register na bisita at trucker ay na-proseso na.</div>
+              </div>
+            ) : (
+              <div>Walang nakitang talaan para sa filter na ito.</div>
+            )}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>
+                  <th style={{ padding: '12px 16px' }}>Uri / Visitor Type</th>
+                  <th style={{ padding: '12px 16px' }}>Pangalan ng Bisita</th>
+                  <th style={{ padding: '12px 16px' }}>Kumpanya / Plate No.</th>
+                  <th style={{ padding: '12px 16px' }}>Lugar at Layunin</th>
+                  <th style={{ padding: '12px 16px' }}>Person to Visit</th>
+                  <th style={{ padding: '12px 16px' }}>Petsa at Oras</th>
+                  <th style={{ padding: '12px 16px' }}>Kalusugan</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center' }}>Mga Aksyon</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredVisitors.map((v) => {
+                  const theme = getVisitorTheme(v.visitorType);
+                  const isPending = (v.status || '').toLowerCase().includes('pending');
+                  const isApproved = (v.status || '').toLowerCase().includes('approved') && !v.timeIn;
+                  const isEntered = (v.status || '').toLowerCase() === 'entered' && !v.timeOut;
+                  const isActing = actionLoadingId === v.id;
+
+                  return (
+                    <tr
+                      key={v.id}
+                      style={{
+                        borderBottom: '1px solid #f1f5f9',
+                        background: selectedVisitor?.id === v.id ? '#f0fdf4' : 'transparent',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      {/* Visitor Type Badge */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '3px 10px',
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: theme.color,
+                            color: theme.badgeText,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {v.visitorType}
+                        </span>
+                        {v.passCode && (
+                          <div style={{ marginTop: 4, fontWeight: 800, fontSize: 12, color: theme.color }}>
+                            {v.passCode}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Full Name & Contact */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{v.fullName}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                          {v.idType}: <span style={{ fontFamily: 'monospace' }}>{v.idNumber}</span>
+                        </div>
+                        {v.contact && <div style={{ fontSize: 11, color: '#64748b' }}>📞 {v.contact}</div>}
+                      </td>
+
+                      {/* Company & Vehicle Plate */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 600, color: '#334155' }}>{v.company || '—'}</div>
+                        {v.plate ? (
+                          <div style={{ display: 'inline-block', marginTop: 3, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, fontWeight: 700, fontSize: 11, color: '#0f172a' }}>
+                            🚛 {v.plate}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>Walang sasakyan</span>
+                        )}
+                      </td>
+
+                      {/* Area & Purpose */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{v.area}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{v.purpose}</div>
+                      </td>
+
+                      {/* Person to Visit */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontSize: 13, color: '#334155', fontWeight: 500 }}>
+                          {v.personToVisit || 'N/A - Delivery / Pick-up'}
+                        </div>
+                      </td>
+
+                      {/* Visit Date & Expected Time */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 600, color: '#334155' }}>{v.visitDate}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>🕒 {v.expectedTime}</div>
+                      </td>
+
+                      {/* Health Status */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                        {v.hasHealthSymptoms ? (
+                          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: 11 }}>
+                            ⚠️ May Sintomas
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: 11 }}>
+                            ✓ Cleared
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '14px 16px', verticalAlign: 'top', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 150 }}>
+                          {/* Approve Button for Pending */}
+                          {isPending && (
+                            <button
+                              type="button"
+                              onClick={() => doAction(v, 'approve')}
+                              disabled={isActing}
+                              style={{
+                                background: '#16a34a',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 6,
+                                padding: '8px 12px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 4,
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                              }}
+                            >
+                              {isActing ? 'Pinoproseso...' : '✓ Approve & Issue Pass'}
+                            </button>
+                          )}
+
+                          {/* Record Entry for Approved */}
+                          {isApproved && (
+                            <button
+                              type="button"
+                              onClick={() => doAction(v, 'entry')}
+                              disabled={isActing}
+                              style={{
+                                background: '#2563eb',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 6,
+                                padding: '8px 12px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              🚪 Record Entry (Pumasok)
+                            </button>
+                          )}
+
+                          {/* Record Exit for Entered */}
+                          {isEntered && (
+                            <button
+                              type="button"
+                              onClick={() => doAction(v, 'exit')}
+                              disabled={isActing}
+                              style={{
+                                background: '#d97706',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 6,
+                                padding: '8px 12px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              👋 Record Exit (Lumabas)
+                            </button>
+                          )}
+
+                          {/* View Pass link if issued */}
+                          {v.passCode && (
+                            <Link
+                              href={`/pass?id=${v.id}`}
+                              style={{
+                                background: '#f8fafc',
+                                color: '#0f172a',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: 6,
+                                padding: '5px 10px',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                textAlign: 'center',
+                              }}
+                            >
+                              🎫 Buksan ang Pass
+                            </Link>
+                          )}
+
+                          {/* Secondary options: Review details & Reject */}
+                          <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedVisitor(v)}
+                              style={{
+                                background: '#f1f5f9',
+                                color: '#334155',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: 4,
+                                padding: '4px 8px',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                flex: 1,
+                              }}
+                            >
+                              🔍 Detalye
+                            </button>
+
+                            {isPending && (
+                              <button
+                                type="button"
+                                onClick={() => doAction(v, 'reject')}
+                                disabled={isActing}
+                                style={{
+                                  background: '#fee2e2',
+                                  color: '#991b1b',
+                                  border: '1px solid #fca5a5',
+                                  borderRadius: 4,
+                                  padding: '4px 8px',
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ✕ Reject
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+      {/* Detail Modal / Drawer kapag pinindot ang Detalye */}
+      {selectedVisitor && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setSelectedVisitor(null)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              maxWidth: 720,
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: 24,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e5e7eb', paddingBottom: 12 }}>
+              <div>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: getVisitorTheme(selectedVisitor.visitorType).color,
+                    color: getVisitorTheme(selectedVisitor.visitorType).badgeText,
+                    marginBottom: 6,
+                  }}
+                >
+                  {selectedVisitor.visitorType}
+                </span>
+                <h3 style={{ margin: 0, fontSize: 18, color: '#0f172a' }}>{selectedVisitor.fullName}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+                  {selectedVisitor.company} • {selectedVisitor.visitDate} ({selectedVisitor.expectedTime})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedVisitor(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 16, cursor: 'pointer', color: '#475569' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, fontSize: 13 }}>
+              <div>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700, display: 'block' }}>ID TYPE &amp; NUMBER</span>
+                <span style={{ fontWeight: 600 }}>{selectedVisitor.idType} — {selectedVisitor.idNumber}</span>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700, display: 'block' }}>CONTACT</span>
+                <span style={{ fontWeight: 600 }}>{selectedVisitor.contact || 'N/A'}</span>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700, display: 'block' }}>PURPOSE</span>
+                <span style={{ fontWeight: 600 }}>{selectedVisitor.purpose}</span>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700, display: 'block' }}>REQUESTED AREA</span>
+                <span style={{ fontWeight: 600 }}>{selectedVisitor.area}</span>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700, display: 'block' }}>PERSON TO VISIT</span>
+                <span style={{ fontWeight: 600 }}>{selectedVisitor.personToVisit || 'N/A - Delivery / Pick-up'}</span>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700, display: 'block' }}>VEHICLE PLATE</span>
+                <span style={{ fontWeight: 600 }}>{selectedVisitor.plate || 'Walang Sasakyan'}</span>
+              </div>
+            </div>
+
+            {/* Health Declaration Responses */}
+            <div style={{ marginTop: 16, background: '#f8fafc', padding: 12, borderRadius: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: '#334155', marginBottom: 6 }}>
+                14 Health Assessment Questions
+              </div>
+              <div style={{ fontSize: 12, color: '#475569', maxHeight: 120, overflowY: 'auto' }}>
+                {(() => {
+                  try {
+                    const arr = JSON.parse(selectedVisitor.healthAnswers || '[]');
+                    return arr.map((ans: string, idx: number) => (
+                      <span key={idx} style={{ display: 'inline-block', marginRight: 8, marginBottom: 4 }}>
+                        Q{idx + 1}: <b style={{ color: ans === 'Yes' ? '#dc2626' : '#16a34a' }}>{ans}</b>
+                      </span>
+                    ));
+                  } catch {
+                    return selectedVisitor.healthAnswers;
+                  }
+                })()}
+              </div>
+            </div>
+
+            {/* ID Document Preview if uploaded */}
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: '#334155', marginBottom: 6 }}>
+                Uploaded Valid ID Document (RA 10173 Protected)
+              </div>
+              {selectedVisitor.idPurgedAt ? (
+                <div style={{ padding: 12, background: '#f1f5f9', borderRadius: 6, fontSize: 12, color: '#64748b' }}>
+                  🗑 Ang file ng ID ay na-purge / binura na alinsunod sa Data Privacy Act (RA 10173).
+                </div>
+              ) : selectedVisitor.idFilePath && selectedVisitor.idFileType?.startsWith('image/') ? (
+                <div>
+                  <img
+                    src={`/api/id-preview?id=${selectedVisitor.id}&guard=${encodeURIComponent(guardName || 'Security Guard')}`}
+                    alt="ID Document"
+                    style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 8, border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              ) : selectedVisitor.idFilePath && selectedVisitor.idFileType === 'application/pdf' ? (
+                <a
+                  href={`/api/id-preview?id=${selectedVisitor.id}&guard=${encodeURIComponent(guardName || 'Security Guard')}`}
+                  target="_blank"
+                  rel="noopener"
+                  style={{ color: '#2563eb', textDecoration: 'underline', fontSize: 13 }}
+                >
+                  Buksan ang Uploaded PDF ID
+                </a>
+              ) : (
+                <div style={{ padding: 12, background: '#f8fafc', borderRadius: 6, fontSize: 12, color: '#94a3b8' }}>
+                  Walang in-upload na digital ID photo. Paki-hingi ang pisikal na valid ID sa mismong guard house bago mag-approve.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setSelectedVisitor(null)}
+                style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '8px 14px', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Isara
+              </button>
+              {(selectedVisitor.status || '').toLowerCase().includes('pending') && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      doAction(selectedVisitor, 'reject');
+                    }}
+                    style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '8px 14px', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Reject ID
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      doAction(selectedVisitor, 'approve');
+                    }}
+                    style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    ✓ Approve &amp; Issue Gate Pass
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -199,7 +825,7 @@ export default function GuardPage() {
   return (
     <div>
       <Navigation activeTab="guard" />
-      <Suspense fallback={<div style={{ padding: 24 }}>Loading...</div>}>
+      <Suspense fallback={<div style={{ padding: 24, textAlign: 'center', color: '#fff' }}>Kinakarga ang Guard Dashboard...</div>}>
         <GuardContent />
       </Suspense>
     </div>
