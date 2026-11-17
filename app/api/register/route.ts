@@ -58,7 +58,52 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Lumikha ng Visitor record sa database
+    // Iwasan ang duplicate entry: Suriin kung may umiiral nang registration para sa parehong pangalan at petsa
+    const existing = await prisma.visitor.findFirst({
+      where: {
+        fullName: validated.fullName.trim(),
+        visitDate: validated.visitDate,
+        status: { in: ['Pending ID Verification', 'Approved - Pass Issued'] },
+      },
+      orderBy: { registeredAt: 'desc' },
+    });
+
+    if (existing) {
+      // I-update na lamang ang umiiral na entry upang hindi madoble ang talaan
+      const updated = await prisma.visitor.update({
+        where: { id: existing.id },
+        data: {
+          visitorType: validated.visitorType,
+          company: validated.company && validated.company.trim() ? validated.company.trim() : existing.company,
+          contact: validated.contact || existing.contact,
+          personToVisit: (validated.personToVisit && validated.personToVisit.trim()) ? validated.personToVisit.trim() : existing.personToVisit,
+          purpose: validated.purpose,
+          area: validated.area,
+          plate: validated.plate || existing.plate,
+          expectedTime: validated.expectedTime,
+          notes: validated.notes || existing.notes,
+          healthAnswers: JSON.stringify(validated.healthAnswers),
+          healthConsent: validated.healthConsent,
+          hasHealthSymptoms: hasSymptoms,
+          idFileName: fileName || existing.idFileName,
+          idFileType: fileType || existing.idFileType,
+          idFilePath: filePath || existing.idFilePath,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: updated.id,
+          fullName: updated.fullName,
+          status: updated.status,
+          hasHealthSymptoms: updated.hasHealthSymptoms,
+          message: 'Na-update ang kasalukuyang registration ng bisita (single entry).',
+        },
+      });
+    }
+
+    // Lumikha ng Visitor record sa database (bago at natatangi)
     const visitor = await prisma.visitor.create({
       data: {
         visitorType: validated.visitorType,

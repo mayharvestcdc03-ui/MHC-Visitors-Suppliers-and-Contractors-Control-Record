@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigation } from '../components/Header';
 import { GatePassCard } from '../components/GatePassCard';
 
@@ -119,8 +119,12 @@ export default function HomePage() {
     reader.readAsDataURL(file);
   };
 
+  const isSubmitting = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting.current || loading) return;
+    isSubmitting.current = true;
     setLoading(true); setError('');
     try {
       const res = await fetch('/api/register', {
@@ -139,6 +143,7 @@ export default function HomePage() {
       setError('Could not reach the server. Please try again.');
     } finally {
       setLoading(false);
+      isSubmitting.current = false;
     }
   };
 

@@ -56,21 +56,36 @@ function GuardContent() {
     }
   }, [params, visitors]);
 
-  // Filter visitors
-  const pendingVisitors = useMemo(() => {
-    return visitors.filter(v => (v.status || '').toLowerCase().includes('pending'));
+  // Deduplicate visitors: siguraduhin na bawat bisita ay ISANG ENTRY LAMANG (walang duplicate sa listahan)
+  const deduplicatedVisitors = useMemo(() => {
+    const seen = new Set<string>();
+    const result: any[] = [];
+    for (const v of visitors) {
+      if (!v || !v.id) continue;
+      // Key batay sa Pangalan + Petsa + Uri ng Bisita upang isa lamang ang lumabas
+      const key = `${(v.fullName || '').trim().toLowerCase()}_${v.visitDate}_${(v.visitorType || '').trim().toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(v);
+    }
+    return result;
   }, [visitors]);
+
+  // Filter visitors gamit ang deduplicated list
+  const pendingVisitors = useMemo(() => {
+    return deduplicatedVisitors.filter(v => (v.status || '').toLowerCase().includes('pending'));
+  }, [deduplicatedVisitors]);
 
   const approvedVisitors = useMemo(() => {
-    return visitors.filter(v => (v.status || '').toLowerCase().includes('approved') && !v.timeIn);
-  }, [visitors]);
+    return deduplicatedVisitors.filter(v => (v.status || '').toLowerCase().includes('approved') && !v.timeIn);
+  }, [deduplicatedVisitors]);
 
   const enteredVisitors = useMemo(() => {
-    return visitors.filter(v => (v.status || '').toLowerCase() === 'entered' && !v.timeOut);
-  }, [visitors]);
+    return deduplicatedVisitors.filter(v => (v.status || '').toLowerCase() === 'entered' && !v.timeOut);
+  }, [deduplicatedVisitors]);
 
   const filteredVisitors = useMemo(() => {
-    let list = visitors;
+    let list = deduplicatedVisitors;
     if (activeFilter === 'PENDING') {
       list = pendingVisitors;
     } else if (activeFilter === 'APPROVED') {
@@ -92,9 +107,10 @@ function GuardContent() {
     }
 
     return list;
-  }, [visitors, activeFilter, pendingVisitors, approvedVisitors, enteredVisitors, search]);
+  }, [deduplicatedVisitors, activeFilter, pendingVisitors, approvedVisitors, enteredVisitors, search]);
 
   const doAction = async (visitor: any, action: string) => {
+    if (actionLoadingId) return; // Pigilan ang double click habang may kasalukuyang aksyon
     if (!guardName.trim()) {
       alert('Paki-lagay muna ang iyong pangalan sa "Guard / Verifier Name" bago magpatuloy.');
       return;
