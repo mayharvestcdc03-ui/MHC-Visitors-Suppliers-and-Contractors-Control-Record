@@ -126,8 +126,13 @@ export default function HomePage() {
                   <input required placeholder="Full Name" value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} />
                 </div>
                 <div className="field">
-                  <label>Company / Address *</label>
-                  <input required placeholder="Company / Address" value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} />
+                  <label>Company / Address {form.visitorType === 'Applicant' ? '(Optional)' : '*'}</label>
+                  <input
+                    required={form.visitorType !== 'Applicant'}
+                    placeholder={form.visitorType === 'Applicant' ? 'Applicant / Address' : 'Company / Address'}
+                    value={form.company}
+                    onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
+                  />
                 </div>
 
                 <div className="field">
@@ -170,8 +175,8 @@ export default function HomePage() {
                   </select>
                 </div>
                 <div className="field">
-                  <label>ID Number *</label>
-                  <input required placeholder="ID Number" value={form.idNumber} onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))} autoComplete="off" />
+                  <label>ID Number (Optional)</label>
+                  <input placeholder="ID Number (o ipakita sa gate)" value={form.idNumber} onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))} autoComplete="off" />
                 </div>
 
                 <div className="field wide">
