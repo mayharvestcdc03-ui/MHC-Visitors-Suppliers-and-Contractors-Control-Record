@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigation } from '../components/Header';
+import { GatePassCard } from '../components/GatePassCard';
 
 const VISITOR_TYPES = [
   'Applicant',
@@ -15,19 +16,31 @@ const VISITOR_TYPES = [
   'Auditor',
   'Visitor',
   'Contractor',
-  'Other'
+  'Other',
 ];
 
 const ID_TYPES = [
-  'Philippine National ID', "Driver's License", 'Passport', 'UMID',
-  'SSS / GSIS ID', 'PRC ID', "Voter's ID",
-  'Company ID with supporting government ID', 'Other government-issued ID'
+  'Philippine National ID (PhilID)',
+  "Driver's License",
+  'Passport',
+  'SSS / UMID',
+  'PRC ID',
+  'Voter ID',
+  'Company ID',
+  'School ID',
+  'Postal ID',
+  'Barangay ID',
+  'Other Government ID',
 ];
 
 const AREAS = [
-  'Office / Reception', 'Warehouse', 'Loading Dock',
-  'Production Area (requires approval and guide)',
-  'Maintenance / Utility', 'Other / Specify in notes'
+  'Office / Reception',
+  'Production Area',
+  'Warehouse / Logistics',
+  'Engineering / Maintenance',
+  'Canteen',
+  'Compound / Parking',
+  'Entire Facility',
 ];
 
 const HEALTH_QUESTIONS = [
@@ -56,8 +69,43 @@ export default function HomePage() {
     privacyConsent: false, idFileData: '', idFileName: '', idFileType: '',
   });
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+
+  // Waiting & Gate Pass Pop-up State
+  const [submittedVisitor, setSubmittedVisitor] = useState<any>(null);
+  const [isWaitingApproval, setIsWaitingApproval] = useState(false);
+  const [approvedVisitor, setApprovedVisitor] = useState<any>(null);
+  const [showPassModal, setShowPassModal] = useState(false);
+
+  // Polling for security approval
+  useEffect(() => {
+    if (!isWaitingApproval || !submittedVisitor?.id) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/visitors/${submittedVisitor.id}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          const v = data.data;
+          // Kapag na-approve na ng guard o may passCode na
+          if (v.passCode || (v.status && v.status.toLowerCase().includes('approved'))) {
+            setApprovedVisitor(v);
+            setIsWaitingApproval(false);
+            setShowPassModal(true);
+            clearInterval(timer);
+          } else if (v.status === 'Rejected') {
+            setIsWaitingApproval(false);
+            setError('Paumanhin, na-reject ng Security Guard ang inyong registration. Mangyaring lumapit sa Guard House.');
+            clearInterval(timer);
+          }
+        }
+      } catch (e) {
+        console.warn('Polling check notice:', e);
+      }
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [isWaitingApproval, submittedVisitor]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,7 +121,7 @@ export default function HomePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); setError(''); setResult(null);
+    setLoading(true); setError('');
     try {
       const res = await fetch('/api/register', {
         method: 'POST',
@@ -81,14 +129,25 @@ export default function HomePage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (data.success) setResult(data.data);
-      else setError(data.error || 'Registration failed. Please try again.');
-    } catch { setError('Could not reach the server. Please try again.'); }
-    finally { setLoading(false); }
+      if (data.success) {
+        setSubmittedVisitor(data.data);
+        setIsWaitingApproval(true);
+      } else {
+        setError(data.error || 'Registration failed. Please try again.');
+      }
+    } catch {
+      setError('Could not reach the server. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reset = () => {
-    setResult(null); setError('');
+    setSubmittedVisitor(null);
+    setIsWaitingApproval(false);
+    setApprovedVisitor(null);
+    setShowPassModal(false);
+    setError('');
     setForm({
       visitorType: '', fullName: '', idType: 'Philippine National ID', idNumber: '', company: '',
       contact: '', personToVisit: '', purpose: '', area: '', plate: '',
@@ -101,27 +160,96 @@ export default function HomePage() {
   return (
     <div>
       <Navigation activeTab="register" />
-      <section className="panel active">
+      <section className="panel active" style={{ maxWidth: 1200, margin: '20px auto', padding: '0 16px' }}>
         <div className="card">
-          <h2>Visitor Registration</h2>
-          <div className="notice">
-            <b>Shared offline mode:</b> when the shared folder is connected (see the bar above), visitor records are saved in that folder and every connected user sees the same data. If the bar says "this computer only", records are saved only in this browser. Keep the shared folder restricted to authorized staff and make regular backups.
-          </div>
+          <h2 style={{ color: '#18794e', marginBottom: 16 }}>Visitor Registration</h2>
 
-          {result && (
-            <div className="notice" style={{ borderColor: '#a8d5b5', background: '#e7f6ee', color: '#0f5c3a', marginTop: 14 }}>
-              <b>Registration saved.</b><br />
-              Reference: <b>{result.id}</b><br />
-              Status: <span className="status pending">Pending ID Verification</span>. The visitor details and physical valid ID must be visually checked by authorized security staff before a one-time gate pass can be issued.
-              <div style={{ marginTop: 12 }}>
-                <button type="button" onClick={reset}>Register Another Visitor</button>
+          {/* Error Message */}
+          {error && (
+            <div className="notice" style={{ borderColor: '#fca5a5', background: '#fef2f2', color: '#991b1b', marginBottom: 14 }}>
+              <b>Pabatid:</b> {error}
+            </div>
+          )}
+
+          {/* Waiting for Guard Approval Screen */}
+          {isWaitingApproval && submittedVisitor && (
+            <div
+              style={{
+                border: '2px dashed #16a34a',
+                background: '#f0fdf4',
+                borderRadius: 12,
+                padding: '36px 20px',
+                textAlign: 'center',
+                margin: '10px 0 20px',
+                boxShadow: '0 4px 12px rgba(22, 163, 74, 0.08)',
+              }}
+            >
+              <div style={{ fontSize: 46, marginBottom: 10 }}>⏳</div>
+              <h3 style={{ fontSize: 20, color: '#166534', fontWeight: 800, margin: '0 0 6px' }}>
+                Nai-submit na ang iyong rehistrasyon, {submittedVisitor.fullName}!
+              </h3>
+              <div style={{ fontSize: 16, color: '#15803d', fontWeight: 700, marginBottom: 14 }}>
+                Pakihintay ng ilang sandali para sa approval ng Security Guard...
+              </div>
+              <p style={{ maxWidth: 560, margin: '0 auto 18px', color: '#374151', fontSize: 13.5, lineHeight: 1.5 }}>
+                Ipinapasa na sa Guard House ang inyong impormasyon. Huwag isara ang pahinang ito.
+                <b> Kusang magpa-pop up dito ang inyong opisyal na One-Time Gate Pass</b> oras na ma-aprubahan ito ng guard upang maaari ninyo itong agad picturan.
+              </p>
+
+              {/* Pulsing Status Pill */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 16px',
+                  background: '#dcfce7',
+                  borderRadius: 20,
+                  border: '1px solid #86efac',
+                  fontSize: 13,
+                  color: '#166534',
+                  fontWeight: 600,
+                }}
+              >
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                    boxShadow: '0 0 8px #22c55e',
+                  }}
+                />
+                <span>Kasalukuyang naghihintay ng tugon mula kay Guard...</span>
+              </div>
+
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #bbf7d0' }}>
+                <button
+                  type="button"
+                  onClick={reset}
+                  style={{
+                    background: '#f3f4f6',
+                    color: '#4b5563',
+                    border: '1px solid #d1d5db',
+                    padding: '8px 16px',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Kanselahin / Mag-register ng Iba
+                </button>
               </div>
             </div>
           )}
 
-          {!result && (
+          {/* Registration Form */}
+          {!isWaitingApproval && (
             <form onSubmit={handleSubmit}>
-              <h3>Visitor Details</h3>
+              <h3 style={{ color: '#17324d', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginBottom: 14 }}>
+                Visitor Details
+              </h3>
               <div className="grid">
                 <div className="field">
                   <label>Visitor Type *</label>
@@ -138,7 +266,7 @@ export default function HomePage() {
                   <label>Company / Address {form.visitorType === 'Applicant' ? '(Optional)' : '*'}</label>
                   <input
                     required={form.visitorType !== 'Applicant'}
-                    placeholder={form.visitorType === 'Applicant' ? 'Applicant / Address' : 'Company / Address'}
+                    placeholder={form.visitorType === 'Applicant' ? 'Optional for applicants' : 'Company / Address'}
                     value={form.company}
                     onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
                   />
@@ -166,7 +294,7 @@ export default function HomePage() {
                 </div>
                 <div className="field">
                   <label>Vehicle Plate No.</label>
-                  <input placeholder="Vehicle Plate No." value={form.plate} onChange={e => setForm(f => ({ ...f, plate: e.target.value }))} />
+                  <input placeholder="Vehicle Plate No. (Optional)" value={form.plate} onChange={e => setForm(f => ({ ...f, plate: e.target.value }))} />
                 </div>
                 <div className="field">
                   <label>Visit Date *</label>
@@ -177,51 +305,47 @@ export default function HomePage() {
                   <label>Expected Time In *</label>
                   <input required type="time" value={form.expectedTime} onChange={e => setForm(f => ({ ...f, expectedTime: e.target.value }))} />
                 </div>
-                <div className="field">
-                  <label>Valid ID Type *</label>
-                  <select required value={form.idType} onChange={e => setForm(f => ({ ...f, idType: e.target.value }))}>
-                    {ID_TYPES.map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>ID Number (Optional)</label>
-                  <input placeholder="ID Number (o ipakita sa gate)" value={form.idNumber} onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))} autoComplete="off" />
-                </div>
-
-                <div className="field wide">
-                  <label>Notes / Other Items</label>
-                  <textarea rows={2} placeholder="Optional" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-                </div>
               </div>
 
-              <h3>Health Declaration (Required)</h3>
-              <p className="muted">
-                Answer each question truthfully. A "Yes" answer may require evaluation by the company nurse, safety officer, or first aider. Visitors with verified health concerns must not enter production areas unless cleared under company procedure.
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>Notes / Other Items</label>
+                <textarea rows={2} placeholder="Optional" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+              </div>
+
+              {/* Health Declaration Table */}
+              <h3 style={{ color: '#17324d', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginTop: 24, marginBottom: 8 }}>
+                Health Declaration (Required)
+              </h3>
+              <p className="muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
+                Answer each question truthfully. A &quot;Yes&quot; answer may require evaluation by the company nurse, safety officer, or first aider. Visitors with verified health concerns must not enter production areas unless cleared under company procedure.
               </p>
-              <div className="tablewrap">
-                <table>
+
+              <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 6, marginBottom: 12 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr>
-                      <th>Health assessment — now or during the last 2 weeks, as applicable</th>
-                      <th style={{ width: 140 }}>Answer *</th>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--line)', textAlign: 'left' }}>
+                      <th style={{ padding: '8px 12px' }}>Health assessment — now or during the last 2 weeks, as applicable</th>
+                      <th style={{ padding: '8px 12px', width: 140, textAlign: 'right' }}>Answer *</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {HEALTH_QUESTIONS.map((q, i) => (
-                      <tr key={i}>
-                        <td>{q}</td>
-                        <td>
+                    {HEALTH_QUESTIONS.map((q, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #edf2f7' }}>
+                        <td style={{ padding: '8px 12px' }}>{q}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                           <select
                             required
-                            value={form.healthAnswers[i]}
-                            onChange={e => setForm(f => ({
-                              ...f,
-                              healthAnswers: f.healthAnswers.map((a, ai) => ai === i ? e.target.value : a)
-                            }))}
+                            value={form.healthAnswers[idx] || ''}
+                            onChange={e => {
+                              const ans = [...form.healthAnswers];
+                              ans[idx] = e.target.value;
+                              setForm(f => ({ ...f, healthAnswers: ans }));
+                            }}
+                            style={{ width: 110, padding: 6, fontSize: 13 }}
                           >
                             <option value="">Select</option>
-                            <option>No</option>
-                            <option>Yes</option>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
                           </select>
                         </td>
                       </tr>
@@ -230,52 +354,160 @@ export default function HomePage() {
                 </table>
               </div>
 
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0 16px' }}>
+                <input
+                  type="checkbox"
+                  id="healthConsent"
+                  required
+                  checked={form.healthConsent}
+                  onChange={e => setForm(f => ({ ...f, healthConsent: e.target.checked }))}
+                  style={{ width: 'auto', marginTop: 3 }}
+                />
+                <label htmlFor="healthConsent" style={{ fontWeight: 400, fontSize: 12.5, margin: 0 }}>
+                  I declare under penalty of company policy that the health information above is true and correct to the best of my knowledge.
+                </label>
+              </div>
+
+              {/* Data Privacy & Optional ID Upload */}
+              <h3 style={{ color: '#17324d', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginTop: 24, marginBottom: 8 }}>
+                Data Privacy &amp; ID Verification (RA 10173)
+              </h3>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '8px 0 14px' }}>
+                <input
+                  type="checkbox"
+                  id="privacyConsent"
+                  required
+                  checked={form.privacyConsent}
+                  onChange={e => setForm(f => ({ ...f, privacyConsent: e.target.checked }))}
+                  style={{ width: 'auto', marginTop: 3 }}
+                />
+                <label htmlFor="privacyConsent" style={{ fontWeight: 400, fontSize: 12.5, margin: 0 }}>
+                  I consent to the collection and processing of my name, contact details, company, visit purpose, and health declaration for security and biosecurity purposes per the Philippine Data Privacy Act of 2012 (RA 10173).
+                </label>
+              </div>
+
               <div className="grid two" style={{ marginTop: 12 }}>
-                <div className="field wide">
-                  <label>Health declaration *</label>
-                  <div>
-                    <input
-                      type="checkbox"
-                      required
-                      checked={form.healthConsent}
-                      onChange={e => setForm(f => ({ ...f, healthConsent: e.target.checked }))}
-                    />
-                    {' '}I declare that my answers are truthful and authorize MHC to process this information for visitor health and access control, subject to applicable privacy requirements.
-                  </div>
+                <div className="field">
+                  <label>Valid ID Type (Optional)</label>
+                  <select value={form.idType} onChange={e => setForm(f => ({ ...f, idType: e.target.value }))}>
+                    {ID_TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>ID Number (Optional)</label>
+                  <input
+                    placeholder="Ilagay ang ID number (o ipakita sa gate)"
+                    value={form.idNumber}
+                    onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))}
+                  />
                 </div>
               </div>
 
-              <h3>Identity Verification Upload (Optional)</h3>
-              <div className="grid two">
-                <div className="field">
-                  <label>Upload clear image or scan of valid ID (Optional)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={handleFile} />
-                  {form.idFileName && <span className="muted" style={{ fontSize: 12 }}> ✓ {form.idFileName}</span>}
-                </div>
-                <div className="field">
-                  <label>Privacy acknowledgement *</label>
-                  <div>
-                    <input
-                      type="checkbox"
-                      required
-                      checked={form.privacyConsent}
-                      onChange={e => setForm(f => ({ ...f, privacyConsent: e.target.checked }))}
-                    />
-                    {' '}I understand my information and ID details will be used for visitor security and access control.
-                  </div>
-                </div>
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>Upload ID Photo / Document (Opsyonal)</label>
+                <input type="file" accept="image/*,application/pdf" onChange={handleFile} />
+                <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  Ang pag-upload ng ID photo ay <b>opsyonal</b>. Maaaring ipakita nang personal ang physical ID sa security guard sa gate.
+                </p>
               </div>
-              <p className="muted">Ang pag-upload ng ID photo ay opsyonal. Maaaring ipakita nang personal ang physical ID sa security guard sa gate.</p>
 
-              {error && <div className="notice" style={{ borderColor: '#f5c6cb', background: '#fff3f3', color: '#721c24' }}>{error}</div>}
-              <div className="actions">
-                <button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Submit Registration'}</button>
+              <div className="actions" style={{ marginTop: 16 }}>
+                <button type="submit" disabled={loading} style={{ background: '#245b82' }}>
+                  {loading ? 'Kinakarga...' : 'Submit Registration'}
+                </button>
                 <button type="button" className="secondary" onClick={reset}>Clear Form</button>
               </div>
             </form>
           )}
         </div>
       </section>
+
+      {/* POP-UP GATE PASS MODAL (Lalabas agad oras na ma-approve ng Guard!) */}
+      {showPassModal && approvedVisitor && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.78)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 680,
+              width: '100%',
+              maxHeight: '94vh',
+              overflowY: 'auto',
+              background: '#ffffff',
+              borderRadius: 16,
+              padding: '24px 20px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+              textAlign: 'center',
+            }}
+          >
+            {/* Celebration Header */}
+            <div
+              style={{
+                marginBottom: 16,
+                padding: '14px 18px',
+                background: '#ecfdf5',
+                border: '1.5px solid #10b981',
+                borderRadius: 10,
+              }}
+            >
+              <div style={{ fontSize: 20, fontWeight: 900, color: '#065f46', marginBottom: 4 }}>
+                🎉 NA-APPROVE NA ANG INYONG GATE PASS!
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#047857' }}>
+                📸 Maaari mo na itong <u>PICTURAN</u> o <u>I-SCREENSHOT</u> gamit ang iyong cellphone bago pumasok sa gate:
+              </div>
+            </div>
+
+            {/* Reusable Gate Pass Card */}
+            <GatePassCard
+              visitor={approvedVisitor}
+              isModal={true}
+              onPrint={() => window.print()}
+              onClose={() => {
+                setShowPassModal(false);
+                reset();
+              }}
+            />
+
+            {/* Bottom Button */}
+            <div style={{ marginTop: 18 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPassModal(false);
+                  reset();
+                }}
+                style={{
+                  background: '#15803d',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '12px 26px',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(21, 128, 61, 0.3)',
+                }}
+              >
+                ✓ Nakuha ko na ang litrato / Mag-register ng panibago
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
