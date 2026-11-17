@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Navigation } from '../components/Header';
 import { GatePassCard } from '../components/GatePassCard';
+import { Language, translations, HEALTH_QUESTIONS_TL, HEALTH_QUESTIONS_EN } from '../lib/i18n';
 
 const VISITOR_TYPES = [
   'Applicant',
@@ -43,24 +44,29 @@ const AREAS = [
   'Entire Facility',
 ];
 
-const HEALTH_QUESTIONS = [
-  '1. Diarrhea, vomiting, food poisoning, or stomach/bowel disorders?',
-  '2. Cough, sweating/chills, fever, pneumonia, sore throat, severe cold/flu, or shortness of breath?',
-  '3. Headache?',
-  '4. Body pain?',
-  '5. Hepatitis / jaundice?',
-  '6. Typhoid / paratyphoid fever?',
-  '7. Discharges from nose, eyes, ears, or gums?',
-  '8. Boils, lesions, rash, acne, septic fingers, eczema, or any skin disease?',
-  '9. Shortness of breath / difficulty breathing?',
-  '10. Recently travelled from abroad where food-borne diseases are prevalent?',
-  '11. Worked or stayed in the same close environment as a COVID-19 case?',
-  '12. Contact with anyone with fever, cough, colds, or sore throat in the past 2 weeks?',
-  '13. Travelled outside the Philippines in the last 14 days?',
-  '14. Travelled to any area in NCR or Manila aside from your home?',
-];
-
 export default function HomePage() {
+  const [lang, setLang] = useState<Language>('tl');
+
+  useEffect(() => {
+    const saved = (localStorage.getItem('mhc_lang') as Language) || 'tl';
+    setLang(saved);
+
+    const onLangChange = (e: any) => {
+      if (e.detail?.lang) setLang(e.detail.lang);
+    };
+    window.addEventListener('mhc_lang_changed', onLangChange);
+    return () => window.removeEventListener('mhc_lang_changed', onLangChange);
+  }, []);
+
+  const switchLang = (newLang: Language) => {
+    setLang(newLang);
+    localStorage.setItem('mhc_lang', newLang);
+    window.dispatchEvent(new CustomEvent('mhc_lang_changed', { detail: { lang: newLang } }));
+  };
+
+  const t = translations[lang];
+  const questions = lang === 'tl' ? HEALTH_QUESTIONS_TL : HEALTH_QUESTIONS_EN;
+
   const [form, setForm] = useState({
     visitorType: '', fullName: '', idType: 'Philippine National ID', idNumber: '', company: '',
     contact: '', personToVisit: '', purpose: '', area: '', plate: '',
@@ -95,7 +101,7 @@ export default function HomePage() {
             clearInterval(timer);
           } else if (v.status === 'Rejected') {
             setIsWaitingApproval(false);
-            setError('Paumanhin, na-reject ng Security Guard ang inyong registration. Mangyaring lumapit sa Guard House.');
+            setError(lang === 'tl' ? 'Paumanhin, na-reject ng Security Guard ang inyong registration. Mangyaring lumapit sa Guard House.' : 'Your registration was rejected by Security. Please proceed to the Guard House.');
             clearInterval(timer);
           }
         }
@@ -105,14 +111,18 @@ export default function HomePage() {
     }, 2500);
 
     return () => clearInterval(timer);
-  }, [isWaitingApproval, submittedVisitor]);
+  }, [isWaitingApproval, submittedVisitor, lang]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) { setError('File is too large. Use a file under 8 MB.'); return; }
+    if (file.size > 8 * 1024 * 1024) {
+      setError(lang === 'tl' ? 'Masyadong malaki ang file. Gumamit ng file na mas mababa sa 8 MB.' : 'File is too large. Please use a file under 8 MB.');
+      return;
+    }
     if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      setError('Upload an image or PDF of the ID.'); return;
+      setError(lang === 'tl' ? 'Mag-upload ng imahe o PDF ng valid ID.' : 'Upload an image or PDF of the valid ID.');
+      return;
     }
     const reader = new FileReader();
     reader.onload = () => setForm(f => ({ ...f, idFileData: reader.result as string, idFileName: file.name, idFileType: file.type }));
@@ -137,10 +147,10 @@ export default function HomePage() {
         setSubmittedVisitor(data.data);
         setIsWaitingApproval(true);
       } else {
-        setError(data.error || 'Registration failed. Please try again.');
+        setError(data.error || (lang === 'tl' ? 'Nabigo ang registration. Pakisubukan muli.' : 'Registration failed. Please try again.'));
       }
     } catch {
-      setError('Could not reach the server. Please try again.');
+      setError(lang === 'tl' ? 'Hindi maabot ang server. Pakisubukan muli.' : 'Could not reach server. Please try again.');
     } finally {
       setLoading(false);
       isSubmitting.current = false;
@@ -167,7 +177,55 @@ export default function HomePage() {
       <Navigation activeTab="register" />
       <section className="panel active" style={{ maxWidth: 1200, margin: '20px auto', padding: '0 16px' }}>
         <div className="card">
-          <h2 style={{ color: '#18794e', marginBottom: 16 }}>Visitor Registration</h2>
+          {/* Header & Language Switcher Pill */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, borderBottom: '2px solid #e2ece6', paddingBottom: 14, marginBottom: 18 }}>
+            <h2 style={{ color: '#18794e', margin: 0, fontSize: 20 }}>{t.title}</h2>
+
+            <div
+              style={{
+                display: 'inline-flex',
+                background: '#f0fdf4',
+                padding: '3px',
+                borderRadius: 8,
+                border: '1.5px solid #86efac',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => switchLang('tl')}
+                style={{
+                  background: lang === 'tl' ? '#18794e' : 'transparent',
+                  color: lang === 'tl' ? '#ffffff' : '#166534',
+                  padding: '5px 12px',
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                🇵🇭 Tagalog
+              </button>
+              <button
+                type="button"
+                onClick={() => switchLang('en')}
+                style={{
+                  background: lang === 'en' ? '#18794e' : 'transparent',
+                  color: lang === 'en' ? '#ffffff' : '#166534',
+                  padding: '5px 12px',
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                🇺🇸 English
+              </button>
+            </div>
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -191,14 +249,13 @@ export default function HomePage() {
             >
               <div style={{ fontSize: 46, marginBottom: 10 }}>⏳</div>
               <h3 style={{ fontSize: 20, color: '#166534', fontWeight: 800, margin: '0 0 6px' }}>
-                Nai-submit na ang iyong rehistrasyon, {submittedVisitor.fullName}!
+                {t.waitingTitle}, {submittedVisitor.fullName}!
               </h3>
               <div style={{ fontSize: 16, color: '#15803d', fontWeight: 700, marginBottom: 14 }}>
-                Pakihintay ng ilang sandali para sa approval ng Security Guard...
+                {t.waitingSubtitle}
               </div>
               <p style={{ maxWidth: 560, margin: '0 auto 18px', color: '#374151', fontSize: 13.5, lineHeight: 1.5 }}>
-                Ipinapasa na sa Guard House ang inyong impormasyon. Huwag isara ang pahinang ito.
-                <b> Kusang magpa-pop up dito ang inyong opisyal na One-Time Gate Pass</b> oras na ma-aprubahan ito ng guard upang maaari ninyo itong agad picturan.
+                {t.waitingDesc}
               </p>
 
               {/* Pulsing Status Pill */}
@@ -225,7 +282,7 @@ export default function HomePage() {
                     boxShadow: '0 0 8px #22c55e',
                   }}
                 />
-                <span>Kasalukuyang naghihintay ng tugon mula kay Guard...</span>
+                <span>{t.waitingPill}</span>
               </div>
 
               <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #bbf7d0' }}>
@@ -243,7 +300,7 @@ export default function HomePage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Kanselahin / Mag-register ng Iba
+                  {t.cancelBtn}
                 </button>
               </div>
             </div>
@@ -252,89 +309,91 @@ export default function HomePage() {
           {/* Registration Form */}
           {!isWaitingApproval && (
             <form onSubmit={handleSubmit}>
-              <h3 style={{ color: '#17324d', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginBottom: 14 }}>
-                Visitor Details
+              <h3 style={{ color: '#0e3d24', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginBottom: 14 }}>
+                {t.visitorDetails}
               </h3>
               <div className="grid">
                 <div className="field">
-                  <label>Visitor Type *</label>
+                  <label>{t.visitorType}</label>
                   <select required value={form.visitorType} onChange={e => setForm(f => ({ ...f, visitorType: e.target.value }))}>
-                    <option value="">Select type</option>
-                    {VISITOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    <option value="">{t.selectType}</option>
+                    {VISITOR_TYPES.map(typ => <option key={typ} value={typ}>{typ}</option>)}
                   </select>
                 </div>
                 <div className="field">
-                  <label>Full Name *</label>
-                  <input required placeholder="Full Name" value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} />
+                  <label>{t.fullName}</label>
+                  <input required placeholder={t.fullName.replace(' *', '')} value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} />
                 </div>
                 <div className="field">
-                  <label>Company / Address {form.visitorType === 'Applicant' ? '(Optional)' : '*'}</label>
+                  <label>
+                    {t.company} {form.visitorType === 'Applicant' ? t.optionalForApplicant : '*'}
+                  </label>
                   <input
                     required={form.visitorType !== 'Applicant'}
-                    placeholder={form.visitorType === 'Applicant' ? 'Optional for applicants' : 'Company / Address'}
+                    placeholder={form.visitorType === 'Applicant' ? t.optional : t.company}
                     value={form.company}
                     onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
                   />
                 </div>
 
                 <div className="field">
-                  <label>Contact Number</label>
-                  <input type="tel" placeholder="Contact Number" value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} />
+                  <label>{t.contact}</label>
+                  <input type="tel" placeholder={t.contact} value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} />
                 </div>
                 <div className="field">
-                  <label>Person to Visit</label>
-                  <input placeholder="Person to Visit (Opsyonal para sa truckers / delivery)" value={form.personToVisit} onChange={e => setForm(f => ({ ...f, personToVisit: e.target.value }))} />
+                  <label>{t.personToVisit}</label>
+                  <input placeholder={t.personToVisitOptional} value={form.personToVisit} onChange={e => setForm(f => ({ ...f, personToVisit: e.target.value }))} />
                 </div>
                 <div className="field">
-                  <label>Purpose of Visit *</label>
-                  <input required placeholder="Purpose of Visit" value={form.purpose} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} />
+                  <label>{t.purpose}</label>
+                  <input required placeholder={t.purpose.replace(' *', '')} value={form.purpose} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} />
                 </div>
 
                 <div className="field">
-                  <label>Requested Area *</label>
+                  <label>{t.area}</label>
                   <select required value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))}>
-                    <option value="">Select area</option>
+                    <option value="">{t.selectArea}</option>
                     {AREAS.map(a => <option key={a}>{a}</option>)}
                   </select>
                 </div>
                 <div className="field">
-                  <label>Vehicle Plate No.</label>
-                  <input placeholder="Vehicle Plate No. (Optional)" value={form.plate} onChange={e => setForm(f => ({ ...f, plate: e.target.value }))} />
+                  <label>{t.plate}</label>
+                  <input placeholder={t.plate} value={form.plate} onChange={e => setForm(f => ({ ...f, plate: e.target.value }))} />
                 </div>
                 <div className="field">
-                  <label>Visit Date *</label>
+                  <label>{t.visitDate}</label>
                   <input required type="date" value={form.visitDate} onChange={e => setForm(f => ({ ...f, visitDate: e.target.value }))} />
                 </div>
 
                 <div className="field">
-                  <label>Expected Time In *</label>
+                  <label>{t.expectedTime}</label>
                   <input required type="time" value={form.expectedTime} onChange={e => setForm(f => ({ ...f, expectedTime: e.target.value }))} />
                 </div>
               </div>
 
               <div className="field" style={{ marginTop: 12 }}>
-                <label>Notes / Other Items</label>
-                <textarea rows={2} placeholder="Optional" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+                <label>{t.notes}</label>
+                <textarea rows={2} placeholder={t.optional} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
 
               {/* Health Declaration Table */}
-              <h3 style={{ color: '#17324d', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginTop: 24, marginBottom: 8 }}>
-                Health Declaration (Required)
+              <h3 style={{ color: '#0e3d24', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginTop: 24, marginBottom: 8 }}>
+                {t.healthTitle}
               </h3>
               <p className="muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
-                Answer each question truthfully. A &quot;Yes&quot; answer may require evaluation by the company nurse, safety officer, or first aider. Visitors with verified health concerns must not enter production areas unless cleared under company procedure.
+                {t.healthDesc}
               </p>
 
               <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 6, marginBottom: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--line)', textAlign: 'left' }}>
-                      <th style={{ padding: '8px 12px' }}>Health assessment — now or during the last 2 weeks, as applicable</th>
-                      <th style={{ padding: '8px 12px', width: 140, textAlign: 'right' }}>Answer *</th>
+                      <th style={{ padding: '8px 12px' }}>{t.healthTableHeadQ}</th>
+                      <th style={{ padding: '8px 12px', width: 140, textAlign: 'right' }}>{t.healthTableHeadA}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {HEALTH_QUESTIONS.map((q, idx) => (
+                    {questions.map((q, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #edf2f7' }}>
                         <td style={{ padding: '8px 12px' }}>{q}</td>
                         <td style={{ padding: '8px 12px', textAlign: 'right' }}>
@@ -348,9 +407,9 @@ export default function HomePage() {
                             }}
                             style={{ width: 110, padding: 6, fontSize: 13 }}
                           >
-                            <option value="">Select</option>
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
+                            <option value="">{t.select}</option>
+                            <option value="No">{t.no}</option>
+                            <option value="Yes">{t.yes}</option>
                           </select>
                         </td>
                       </tr>
@@ -369,13 +428,13 @@ export default function HomePage() {
                   style={{ width: 'auto', marginTop: 3 }}
                 />
                 <label htmlFor="healthConsent" style={{ fontWeight: 400, fontSize: 12.5, margin: 0 }}>
-                  I declare under penalty of company policy that the health information above is true and correct to the best of my knowledge.
+                  {t.healthConsent}
                 </label>
               </div>
 
               {/* Data Privacy & Optional ID Upload */}
-              <h3 style={{ color: '#17324d', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginTop: 24, marginBottom: 8 }}>
-                Data Privacy &amp; ID Verification (RA 10173)
+              <h3 style={{ color: '#0e3d24', borderBottom: '1px solid #e5e7eb', paddingBottom: 8, marginTop: 24, marginBottom: 8 }}>
+                {t.privacyTitle}
               </h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '8px 0 14px' }}>
                 <input
@@ -387,21 +446,21 @@ export default function HomePage() {
                   style={{ width: 'auto', marginTop: 3 }}
                 />
                 <label htmlFor="privacyConsent" style={{ fontWeight: 400, fontSize: 12.5, margin: 0 }}>
-                  I consent to the collection and processing of my name, contact details, company, visit purpose, and health declaration for security and biosecurity purposes per the Philippine Data Privacy Act of 2012 (RA 10173).
+                  {t.privacyConsent}
                 </label>
               </div>
 
               <div className="grid two" style={{ marginTop: 12 }}>
                 <div className="field">
-                  <label>Valid ID Type (Optional)</label>
+                  <label>{t.idType}</label>
                   <select value={form.idType} onChange={e => setForm(f => ({ ...f, idType: e.target.value }))}>
-                    {ID_TYPES.map(t => <option key={t}>{t}</option>)}
+                    {ID_TYPES.map(idT => <option key={idT}>{idT}</option>)}
                   </select>
                 </div>
                 <div className="field">
-                  <label>ID Number (Optional)</label>
+                  <label>{t.idNumber}</label>
                   <input
-                    placeholder="Ilagay ang ID number (o ipakita sa gate)"
+                    placeholder={t.idNumberPlaceholder}
                     value={form.idNumber}
                     onChange={e => setForm(f => ({ ...f, idNumber: e.target.value }))}
                   />
@@ -409,18 +468,18 @@ export default function HomePage() {
               </div>
 
               <div className="field" style={{ marginTop: 12 }}>
-                <label>Upload ID Photo / Document (Opsyonal)</label>
+                <label>{t.uploadId}</label>
                 <input type="file" accept="image/*,application/pdf" onChange={handleFile} />
                 <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                  Ang pag-upload ng ID photo ay <b>opsyonal</b>. Maaaring ipakita nang personal ang physical ID sa security guard sa gate.
+                  {t.uploadNote}
                 </p>
               </div>
 
               <div className="actions" style={{ marginTop: 16 }}>
                 <button type="submit" disabled={loading} style={{ background: '#18794e' }}>
-                  {loading ? 'Kinakarga...' : 'Submit Registration'}
+                  {loading ? t.submitting : t.submit}
                 </button>
-                <button type="button" className="secondary" onClick={reset}>Clear Form</button>
+                <button type="button" className="secondary" onClick={reset}>{t.clear}</button>
               </div>
             </form>
           )}
@@ -469,10 +528,10 @@ export default function HomePage() {
               }}
             >
               <div style={{ fontSize: 20, fontWeight: 900, color: '#065f46', marginBottom: 4 }}>
-                🎉 NA-APPROVE NA ANG INYONG GATE PASS!
+                {t.passApprovedTitle}
               </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#047857' }}>
-                📸 Maaari mo na itong <u>PICTURAN</u> o <u>I-SCREENSHOT</u> gamit ang iyong cellphone bago pumasok sa gate:
+                {t.passApprovedSubtitle}
               </div>
             </div>
 
@@ -507,7 +566,7 @@ export default function HomePage() {
                   boxShadow: '0 4px 12px rgba(21, 128, 61, 0.3)',
                 }}
               >
-                ✓ Nakuha ko na ang litrato / Mag-register ng panibago
+                {t.closePassBtn}
               </button>
             </div>
           </div>
