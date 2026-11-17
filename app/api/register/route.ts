@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { prisma, ensureDb } from '../../../lib/prisma';
 import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
@@ -28,6 +28,7 @@ const RegisterSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDb();
     const body = await req.json();
     const validated = RegisterSchema.parse(body);
 

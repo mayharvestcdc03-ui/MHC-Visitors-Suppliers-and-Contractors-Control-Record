@@ -4,6 +4,20 @@ import { createClient } from '@libsql/client';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
+let dbInitialized = false;
+
+export async function ensureDb() {
+  if (dbInitialized) return;
+  try {
+    // Dynamic import to avoid build-time issues
+    const { initDb } = require('../scripts/init-db');
+    await initDb();
+    dbInitialized = true;
+  } catch (err) {
+    console.warn('ensureDb notice:', err);
+  }
+}
+
 function createPrismaClient(): PrismaClient {
   const tursoUrl = process.env.TURSO_DATABASE_URL;
   const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;

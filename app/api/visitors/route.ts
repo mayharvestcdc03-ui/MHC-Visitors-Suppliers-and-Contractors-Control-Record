@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { prisma, ensureDb } from '../../../lib/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 
 export async function GET(req: NextRequest) {
+  await ensureDb();
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') || '';
   const search = searchParams.get('search') || '';

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../../../lib/prisma';
+import { prisma, ensureDb } from '../../../../../lib/prisma';
 import { generatePassCode } from '../../../../../lib/utils';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
+    await ensureDb();
     const { action, guardName } = await req.json();
     const visitor = await prisma.visitor.findUnique({ where: { id: params.id } });
     if (!visitor) return NextResponse.json({ success: false, error: 'Visitor not found' }, { status: 404 });

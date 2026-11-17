@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { prisma, ensureDb } from '../../../lib/prisma';
 import ExcelJS from 'exceljs';
 
 export async function GET(req: NextRequest) {
+  await ensureDb();
   const { searchParams } = new URL(req.url);
   const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
 

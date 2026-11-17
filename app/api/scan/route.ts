@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { prisma, ensureDb } from '../../../lib/prisma';
 
 // Scan QR code and log entry/exit
 export async function GET(req: NextRequest) {
+  await ensureDb();
   const { searchParams } = new URL(req.url);
   const passCode = searchParams.get('passCode');
   if (!passCode) return NextResponse.json({ success: false, error: 'No pass code provided' }, { status: 400 });

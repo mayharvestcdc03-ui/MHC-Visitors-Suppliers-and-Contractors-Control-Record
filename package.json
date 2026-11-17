@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
+    "dev": "node scripts/init-db.js && next dev",
+    "build": "node scripts/init-db.js && prisma generate && next build",
+    "start": "node scripts/init-db.js && next start",
     "lint": "next lint",
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
