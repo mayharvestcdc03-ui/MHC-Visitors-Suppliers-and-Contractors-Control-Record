@@ -417,7 +417,7 @@ export default function HomePage() {
               </div>
 
               <div className="actions" style={{ marginTop: 16 }}>
-                <button type="submit" disabled={loading} style={{ background: '#245b82' }}>
+                <button type="submit" disabled={loading} style={{ background: '#18794e' }}>
                   {loading ? 'Kinakarga...' : 'Submit Registration'}
                 </button>
                 <button type="button" className="secondary" onClick={reset}>Clear Form</button>

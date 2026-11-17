@@ -308,9 +308,9 @@ function GuardContent() {
             type="button"
             onClick={() => setActiveFilter('ENTERED')}
             style={{
-              background: activeFilter === 'ENTERED' ? '#1d4ed8' : '#dbeafe',
-              color: activeFilter === 'ENTERED' ? '#fff' : '#1e40af',
-              border: '1px solid #3b82f6',
+              background: activeFilter === 'ENTERED' ? '#0e3d24' : '#d1fae5',
+              color: activeFilter === 'ENTERED' ? '#fff' : '#064e3b',
+              border: '1px solid #10b981',
               padding: '8px 16px',
               borderRadius: 8,
               fontWeight: 700,
@@ -324,7 +324,7 @@ function GuardContent() {
             <span>🏢 Currently Inside</span>
             <span
               style={{
-                background: activeFilter === 'ENTERED' ? 'rgba(255,255,255,0.3)' : '#1d4ed8',
+                background: activeFilter === 'ENTERED' ? 'rgba(255,255,255,0.3)' : '#0e3d24',
                 color: '#fff',
                 padding: '2px 8px',
                 borderRadius: 12,
@@ -366,7 +366,7 @@ function GuardContent() {
             onClick={fetchVisitors}
             disabled={loading}
             style={{
-              background: '#245b82',
+              background: '#18794e',
               color: '#fff',
               padding: '8px 16px',
               borderRadius: 6,
@@ -550,7 +550,7 @@ function GuardContent() {
                               onClick={() => doAction(v, 'entry')}
                               disabled={isActing}
                               style={{
-                                background: '#2563eb',
+                                background: '#16a34a',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: 6,
@@ -787,7 +787,7 @@ function GuardContent() {
                   href={`/api/id-preview?id=${selectedVisitor.id}&guard=${encodeURIComponent(guardName || 'Security Guard')}`}
                   target="_blank"
                   rel="noopener"
-                  style={{ color: '#2563eb', textDecoration: 'underline', fontSize: 13 }}
+                  style={{ color: '#18794e', textDecoration: 'underline', fontSize: 13, fontWeight: 700 }}
                 >
                   Buksan ang Uploaded PDF ID
                 </a>

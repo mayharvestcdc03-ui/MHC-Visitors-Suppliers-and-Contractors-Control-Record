@@ -275,7 +275,7 @@ export function GatePassCard({ visitor, onPrint, onClose, isModal = false }: Gat
           onClick={onPrint || (() => window.print())}
           style={{
             flex: 1,
-            background: '#245b82',
+            background: '#18794e',
             color: '#fff',
             border: 'none',
             borderRadius: 6,

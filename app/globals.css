@@ -3,11 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --navy: #17324d;
-  --blue: #245b82;
-  --light: #f3f6f9;
-  --line: #d7e0e8;
+  --navy: #0e3d24;
+  --blue: #18794e;
+  --light: #f0fdf4;
+  --line: #c6e6d3;
   --green: #18794e;
+  --green-dark: #0e3d24;
+  --green-hover: #15803d;
   --red: #b42318;
 }
 
@@ -23,9 +25,10 @@ body {
 }
 
 header {
-  background: var(--navy);
+  background: #0e3d24;
   color: white;
   padding: 16px 24px;
+  border-bottom: 3px solid #16a34a;
 }
 
 nav {
@@ -34,7 +37,7 @@ nav {
   flex-wrap: wrap;
   padding: 12px 20px;
   background: white;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid #c6e6d3;
 }
 
 button, .tab {
@@ -46,46 +49,56 @@ button, .tab {
   font-size: 14px;
   text-decoration: none;
   display: inline-block;
-  background: var(--blue);
+  background: #18794e;
   color: white;
+  transition: all 0.15s ease;
+}
+
+button:hover {
+  background: #15803d;
 }
 
 .tab {
-  background: #e6edf3;
-  color: var(--navy);
+  background: #e8f5ed;
+  color: #0e3d24;
+}
+
+.tab:hover {
+  background: #d1fae5;
+  color: #064e3b;
 }
 
 .tab.active {
-  background: var(--navy);
+  background: #0e3d24;
   color: white;
 }
 
 main {
-  max-width: 1200px;
+  max-width: 1250px;
   margin: 20px auto;
   padding: 0 16px;
 }
 
 .card {
   background: white;
-  border: 1px solid var(--line);
+  border: 1px solid #c6e6d3;
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 7px rgba(21, 43, 59, 0.08);
+  box-shadow: 0 3px 10px rgba(14, 61, 36, 0.08);
 }
 
 h2 {
-  font-size: 19px;
+  font-size: 20px;
   margin: 0 0 16px;
-  color: var(--green);
-  font-weight: 700;
+  color: #18794e;
+  font-weight: 800;
 }
 
 h3 {
   margin: 18px 0 10px;
-  font-size: 15px;
-  color: var(--navy);
+  font-size: 16px;
+  color: #0e3d24;
   font-weight: 700;
 }
 
@@ -104,13 +117,13 @@ label {
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 5px;
-  color: #34495e;
+  color: #0e3d24;
 }
 
 input, select, textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid #bdcbd7;
+  border: 1px solid #bbf7d0;
   border-radius: 6px;
   background: white;
   font: inherit;
@@ -120,7 +133,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--blue);
+  border-color: #18794e;
+  box-shadow: 0 0 0 2px rgba(24, 121, 78, 0.2);
 }
 
 input[type="checkbox"] {
@@ -137,7 +151,7 @@ input[type="checkbox"] {
 }
 
 .muted {
-  color: #5c6c79;
+  color: #4b6354;
   font-size: 13px;
 }
 
@@ -149,8 +163,12 @@ input[type="checkbox"] {
 }
 
 .secondary {
-  background: #647789 !important;
+  background: #4b6354 !important;
   color: white !important;
+}
+
+.secondary:hover {
+  background: #374b3f !important;
 }
 
 .danger {
@@ -159,18 +177,23 @@ input[type="checkbox"] {
 }
 
 .success {
-  background: var(--green) !important;
+  background: #18794e !important;
   color: white !important;
+}
+
+.success:hover {
+  background: #15803d !important;
 }
 
 .notice {
   padding: 12px 14px;
   border-radius: 8px;
-  background: #edf5fb;
-  border: 1px solid #c8deef;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   margin: 10px 0;
   font-size: 13.5px;
   line-height: 1.5;
+  color: #166534;
 }
 
 .status {
@@ -182,7 +205,7 @@ input[type="checkbox"] {
 }
 
 .verified {
-  color: var(--green);
+  color: #18794e;
 }
 
 .expired {
@@ -197,26 +220,26 @@ table {
 
 th, td {
   text-align: left;
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2ece6;
   vertical-align: middle;
 }
 
 th {
-  background: #edf2f6;
-  color: var(--navy);
+  background: #e8f5ed;
+  color: #0e3d24;
   font-weight: 700;
 }
 
 .tablewrap {
   overflow: auto;
-  border: 1px solid var(--line);
+  border: 1px solid #c6e6d3;
   border-radius: 8px;
 }
 
 #passCard {
   max-width: 650px;
-  border: 2px dashed var(--navy);
+  border: 2.5px solid #18794e;
   padding: 24px;
   margin-top: 15px;
   background: white;
@@ -226,7 +249,7 @@ th {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 2px solid var(--navy);
+  border-bottom: 2px solid #18794e;
   padding-bottom: 12px;
 }
 
@@ -234,7 +257,7 @@ th {
   font-size: 27px;
   font-weight: 800;
   letter-spacing: 2px;
-  color: var(--navy);
+  color: #18794e;
   margin: 16px 0;
 }
 
@@ -266,6 +289,14 @@ th {
   #passCard {
     display: block !important;
     margin: 0 auto !important;
-    border: 2px dashed #222 !important;
+    border: 2px solid #222 !important;
+  }
+  .print-only-card {
+    display: block !important;
+    margin: 0 auto !important;
+  }
+  .print-page {
+    display: block !important;
+    padding: 10px !important;
   }
 }

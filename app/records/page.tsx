@@ -1,12 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Navigation } from '../../components/Header';
+import { getVisitorTheme } from '../../lib/utils';
 
 const RETENTION_DAYS = 30;
 
 function fmt(v: string | null | undefined) {
-  return v ? new Date(v).toLocaleString() : '—';
+  if (!v) return '—';
+  try {
+    const d = new Date(v);
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  } catch {
+    return '—';
+  }
 }
 
 function statusClass(s: string) {
@@ -34,7 +42,7 @@ function retentionInfo(registeredAt: string): { daysLeft: number; label: string;
   if (daysLeft <= 0) return { daysLeft: 0, label: 'ID purged', color: '#888' };
   if (daysLeft <= 5) return { daysLeft, label: `Purge in ${daysLeft}d`, color: '#c0392b' };
   if (daysLeft <= 10) return { daysLeft, label: `Purge in ${daysLeft}d`, color: '#e67e22' };
-  return { daysLeft, label: `ID kept ${daysLeft}d`, color: '#27ae60' };
+  return { daysLeft, label: `ID kept ${daysLeft}d`, color: '#166534' };
 }
 
 export default function RecordsPage() {
@@ -57,7 +65,7 @@ export default function RecordsPage() {
 
   const filtered = visitors.filter(r => {
     const q = search.toLowerCase();
-    const matchSearch = !q || [r.fullName, r.company, r.idNumber, r.passCode, r.id].join(' ').toLowerCase().includes(q);
+    const matchSearch = !q || [r.fullName, r.company, r.idNumber, r.passCode, r.id, r.plate, r.visitorType].join(' ').toLowerCase().includes(q);
     const matchStatus = !statusFilter || getStatus(r) === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -76,7 +84,7 @@ export default function RecordsPage() {
     ].join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'MHC_visitor_records.csv';
+    a.download = `MHC_visitor_records_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
@@ -100,95 +108,140 @@ export default function RecordsPage() {
   return (
     <div>
       <Navigation activeTab="records" />
-      <section className="panel active">
+      <section className="panel active" style={{ maxWidth: 1250, margin: '20px auto', padding: '0 16px' }}>
         <div className="card">
-          <h2>Visitor Monitoring Records</h2>
-          {/* RA 10173 DPA Notice */}
-          <div className="notice" style={{ background: '#eaf4fb', borderColor: '#3498db', color: '#1a5276', marginBottom: 12, fontSize: 13 }}>
-            🔒 <b>RA 10173 Data Privacy:</b> ID numbers are masked for display. Uploaded ID photos are automatically purged after {RETENTION_DAYS} days per NPC retention policy.
-            <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.8 }}>CSV export excludes full ID numbers.</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 12 }}>
+            <div>
+              <h2 style={{ margin: '0 0 4px', color: '#18794e' }}>Visitor Monitoring Records</h2>
+              <p style={{ margin: 0, fontSize: 13, color: '#4b6354' }}>
+                Opisyal na talaan ng lahat ng nag-register, na-verify, pumasok (Time In), at lumabas (Time Out).
+              </p>
+            </div>
+
+            {/* Quick Action: PDF Download & Print */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link
+                href="/records/report"
+                style={{
+                  background: '#18794e',
+                  color: '#fff',
+                  padding: '9px 16px',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  boxShadow: '0 2px 6px rgba(24, 121, 78, 0.25)',
+                }}
+              >
+                📄 I-download / I-print ang PDF Summary (May Entry &amp; Exit) &rarr;
+              </Link>
+            </div>
           </div>
-          <p className="muted">Search locally saved registrations. Use ID Verification / Guard to approve an ID and record entry/exit.</p>
+
+          {/* RA 10173 DPA Notice */}
+          <div className="notice" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', marginBottom: 14, fontSize: 13 }}>
+            🔒 <b>RA 10173 Data Privacy:</b> Ang mga ID number ay protektado at naka-mask. Ang mga litrato ng ID ay awtomatikong binubura makalipas ang {RETENTION_DAYS} araw alinsunod sa NPC privacy policy.
+          </div>
 
           <div className="grid two">
             <div>
-              <label>Search name, company, pass code, or ID number</label>
+              <label>Maghanap (Pangalan, Kumpanya, Plaka, Pass Code, o Uri)</label>
               <input placeholder="Type to search..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <div>
-              <label>Filter status</label>
+              <label>I-filter ayon sa Status</label>
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                <option value="">All statuses</option>
-                <option>Pending ID Verification</option>
-                <option>Approved - Pass Issued</option>
-                <option>Entered</option>
-                <option>Used / Checked Out</option>
-                <option>Rejected</option>
+                <option value="">Lahat ng Status</option>
+                <option value="Pending ID Verification">Pending ID Verification</option>
+                <option value="Approved - Pass Issued">Approved - Pass Issued</option>
+                <option value="Entered">Entered (Pumasok)</option>
+                <option value="Used / Checked Out">Used / Checked Out (Lumabas)</option>
+                <option value="Rejected">Rejected</option>
               </select>
             </div>
           </div>
 
-          <div className="tablewrap" style={{ marginTop: 14 }}>
+          <div className="tablewrap" style={{ marginTop: 16 }}>
             <table>
               <thead>
-                <tr>
-                  <th>Registered</th>
-                  <th>Visitor</th>
-                  <th>Company / Type</th>
-                  <th>Purpose / Area</th>
-                  <th>ID <span style={{ fontWeight: 400, fontSize: 11, color: '#888' }}>(masked)</span></th>
-                  <th>ID Retention</th>
-                  <th>Pass Code</th>
-                  <th>Status</th>
-                  <th>Entry / Exit</th>
-                  <th>Action</th>
+                <tr style={{ background: '#0e3d24', color: '#fff' }}>
+                  <th style={{ color: '#fff' }}>Petsa ng Rehistro</th>
+                  <th style={{ color: '#fff' }}>Pangalan ng Bisita</th>
+                  <th style={{ color: '#fff' }}>Uri</th>
+                  <th style={{ color: '#fff' }}>Kumpanya / Sasakyan</th>
+                  <th style={{ color: '#fff' }}>Bibisitahin / Lugar</th>
+                  <th style={{ color: '#fff' }}>Pass Code</th>
+                  <th style={{ color: '#fff' }}>Status</th>
+                  <th style={{ color: '#fff', background: '#166534' }}>Time In (Pumasok)</th>
+                  <th style={{ color: '#fff', background: '#92400e' }}>Time Out (Lumabas)</th>
+                  <th style={{ color: '#fff' }}>Aksyon</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24 }}>Loading...</td></tr>
+                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24 }}>Kinakarga...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={10}>No matching registrations.</td></tr>
+                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>Walang nakitang talaan.</td></tr>
                 ) : filtered.map(r => {
-                  const ret = r.registeredAt ? retentionInfo(r.registeredAt) : null;
-                  const isPurged = !!r.idPurgedAt;
+                  const ret = retentionInfo(r.registeredAt);
+                  const theme = getVisitorTheme(r.visitorType);
                   return (
                     <tr key={r.id}>
-                      <td>{fmt(r.registeredAt)}</td>
-                      <td><b>{r.fullName}</b><br />{r.visitorType}</td>
-                      <td>{r.company}</td>
-                      <td>{r.purpose}<br />{r.area}</td>
-                      <td>
-                        {r.idType}<br />
-                        <span title="ID number masked per RA 10173" style={{ fontFamily: 'monospace', letterSpacing: 1 }}>
-                          {maskIdNumber(r.idNumber || '')}
-                        </span><br />
-                        <span className="muted">{isPurged ? '🗑 ID file purged' : (r.idFileName || 'No file')}</span>
+                      <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                        <div>{r.visitDate}</div>
+                        <div style={{ color: '#64748b' }}>{r.expectedTime}</div>
                       </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {ret && !isPurged ? (
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, color: ret.color,
-                            background: ret.color + '18', borderRadius: 4,
-                            padding: '2px 6px', whiteSpace: 'nowrap'
-                          }}>
-                            {ret.label}
-                          </span>
-                        ) : isPurged ? (
-                          <span style={{ fontSize: 11, color: '#888' }}>🗑 Purged<br />{fmt(r.idPurgedAt)}</span>
-                        ) : '—'}
-                      </td>
-                      <td>{r.passCode || '—'}</td>
                       <td>
-                        <span className={`status ${statusClass(getStatus(r))}`}>{getStatus(r)}</span>
+                        <b>{r.fullName}</b>
+                        <div className="muted" style={{ fontSize: 11 }}>{r.idType} ({maskIdNumber(r.idNumber)})</div>
                       </td>
-                      <td>In: {fmt(r.timeIn)}<br />Out: {fmt(r.timeOut)}</td>
                       <td>
-                        <a href={`/guard?select=${r.id}`}>
-                          <button className="secondary">Review</button>
-                        </a>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: 10,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: theme.color,
+                            color: theme.badgeText,
+                          }}
+                        >
+                          {r.visitorType}
+                        </span>
+                      </td>
+                      <td>
+                        <div>{r.company || '—'}</div>
+                        {r.plate && <div style={{ fontSize: 11, color: '#166534', fontWeight: 700 }}>🚛 {r.plate}</div>}
+                      </td>
+                      <td>
+                        <div>{r.personToVisit || 'N/A - Delivery / Pick-up'}</div>
+                        <div className="muted" style={{ fontSize: 11 }}>{r.area}</div>
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 800, color: '#0e3d24' }}>
+                        {r.passCode || '—'}
+                      </td>
+                      <td>
+                        <span className={`status ${statusClass(getStatus(r))}`} style={{ fontSize: 12 }}>
+                          {getStatus(r)}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 700, color: r.timeIn ? '#166534' : '#94a3b8', fontSize: 12 }}>
+                        {fmt(r.timeIn)}
+                      </td>
+                      <td style={{ fontWeight: 700, color: r.timeOut ? '#92400e' : '#94a3b8', fontSize: 12 }}>
+                        {fmt(r.timeOut)}
+                      </td>
+                      <td>
                         {r.passCode && (
-                          <> <a href={`/pass?id=${r.id}`}><button>View Pass</button></a></>
+                          <Link href={`/pass?id=${r.id}`} style={{ textDecoration: 'none' }}>
+                            <button style={{ padding: '4px 10px', fontSize: 11, background: '#18794e' }}>
+                              Pass
+                            </button>
+                          </Link>
                         )}
                       </td>
                     </tr>
@@ -198,14 +251,22 @@ export default function RecordsPage() {
             </table>
           </div>
 
-          <div className="actions">
-            <button className="secondary" onClick={exportCSV}>Export CSV (masked IDs)</button>
-            <button className="secondary" onClick={fetchVisitors}>Refresh</button>
-            <button className="secondary" style={{ color: '#c0392b', borderColor: '#e74c3c' }} onClick={handlePurge}>
+          <div className="actions" style={{ marginTop: 18 }}>
+            <Link href="/records/report" style={{ textDecoration: 'none' }}>
+              <button style={{ background: '#18794e', color: '#fff' }}>
+                📄 PDF Summary Report
+              </button>
+            </Link>
+            <button className="secondary" onClick={exportCSV}>
+              📊 Export CSV
+            </button>
+            <button className="secondary" onClick={fetchVisitors}>
+              🔄 Refresh
+            </button>
+            <button className="secondary" style={{ color: '#b91c1c', borderColor: '#fca5a5', background: '#fee2e2' }} onClick={handlePurge}>
               🗑 Run DPA Auto-Purge (&gt;30d)
             </button>
           </div>
-          <p className="muted">CSV export includes masked ID numbers only. Uploaded ID photo files are never included in exports (RA 10173).</p>
         </div>
       </section>
     </div>
