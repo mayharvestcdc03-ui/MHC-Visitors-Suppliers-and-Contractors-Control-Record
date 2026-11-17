@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/prisma';
-import { generatePassCode } from '@/lib/utils';
+import { generatePassCode } from '../../../../../lib/utils';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -11,7 +11,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     let updated;
 
     if (action === 'approve') {
-      const passCode = visitor.passCode || generatePassCode();
+      let passCode = visitor.passCode;
+      if (!passCode) {
+        // Count existing visitors with this type who have been issued a pass
+        const count = await prisma.visitor.count({
+          where: {
+            visitorType: visitor.visitorType,
+            passCode: { not: null },
+          },
+        });
+        passCode = generatePassCode(visitor.visitorType, count + 1);
+      }
       const newStatus = visitor.timeIn ? 'Entered' : 'Approved - Pass Issued';
       updated = await prisma.visitor.update({
         where: { id: params.id },

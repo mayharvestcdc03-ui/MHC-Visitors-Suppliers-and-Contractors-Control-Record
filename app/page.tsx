@@ -4,9 +4,18 @@ import { useState } from 'react';
 import { Navigation } from '../components/Header';
 
 const VISITOR_TYPES = [
-  'Visitor', 'Applicant', 'Supplier', 'Contractor', 'Driver / Helper',
-  'Regulatory Authorities', 'Outside Contractors', 'Tour Groups',
-  'Family and Friends of personnel', 'Other'
+  'Applicant',
+  'Supplier',
+  'Regulatory - LGU',
+  'Live Truck',
+  'Finished Goods Truck',
+  'Repair - Engineering Work',
+  'By-Product Contractor',
+  'Peer Group',
+  'Auditor',
+  'Visitor',
+  'Contractor',
+  'Other'
 ];
 
 const ID_TYPES = [
