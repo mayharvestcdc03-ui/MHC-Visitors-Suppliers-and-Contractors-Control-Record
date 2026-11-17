@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Navigation } from '../components/Header';
 
 const VISITOR_TYPES = [
-  'Visitor', 'Supplier', 'Contractor', 'Driver / Helper',
+  'Visitor', 'Applicant', 'Supplier', 'Contractor', 'Driver / Helper',
   'Regulatory Authorities', 'Outside Contractors', 'Tour Groups',
   'Family and Friends of personnel', 'Other'
 ];
@@ -64,7 +64,6 @@ export default function HomePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.idFileData) { setError('Identity verification upload is required.'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
       const res = await fetch('/api/register', {
@@ -104,7 +103,7 @@ export default function HomePage() {
             <div className="notice" style={{ borderColor: '#a8d5b5', background: '#e7f6ee', color: '#0f5c3a', marginTop: 14 }}>
               <b>Registration saved.</b><br />
               Reference: <b>{result.id}</b><br />
-              Status: <span className="status pending">Pending ID Verification</span>. The uploaded ID must be visually checked by authorized security staff before a one-time gate pass can be issued.
+              Status: <span className="status pending">Pending ID Verification</span>. The visitor details and physical valid ID must be visually checked by authorized security staff before a one-time gate pass can be issued.
               <div style={{ marginTop: 12 }}>
                 <button type="button" onClick={reset}>Register Another Visitor</button>
               </div>
@@ -119,7 +118,7 @@ export default function HomePage() {
                   <label>Visitor Type *</label>
                   <select required value={form.visitorType} onChange={e => setForm(f => ({ ...f, visitorType: e.target.value }))}>
                     <option value="">Select type</option>
-                    {VISITOR_TYPES.map(t => <option key={t}>{t}</option>)}
+                    {VISITOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div className="field">
@@ -232,11 +231,11 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <h3>Identity Verification Upload (Required)</h3>
+              <h3>Identity Verification Upload (Optional)</h3>
               <div className="grid two">
                 <div className="field">
-                  <label>Upload clear image or scan of valid ID *</label>
-                  <input type="file" accept="image/*,.pdf" onChange={handleFile} required={!form.idFileData} />
+                  <label>Upload clear image or scan of valid ID (Optional)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={handleFile} />
                   {form.idFileName && <span className="muted" style={{ fontSize: 12 }}> ✓ {form.idFileName}</span>}
                 </div>
                 <div className="field">
@@ -248,11 +247,11 @@ export default function HomePage() {
                       checked={form.privacyConsent}
                       onChange={e => setForm(f => ({ ...f, privacyConsent: e.target.checked }))}
                     />
-                    {' '}I understand my information and ID copy will be used for visitor security and access control.
+                    {' '}I understand my information and ID details will be used for visitor security and access control.
                   </div>
                 </div>
               </div>
-              <p className="muted">Upload only the ID required for identity checking. Limit access to authorized security personnel and follow your company retention and privacy procedures.</p>
+              <p className="muted">Ang pag-upload ng ID photo ay opsyonal. Maaaring ipakita nang personal ang physical ID sa security guard sa gate.</p>
 
               {error && <div className="notice" style={{ borderColor: '#f5c6cb', background: '#fff3f3', color: '#721c24' }}>{error}</div>}
               <div className="actions">
